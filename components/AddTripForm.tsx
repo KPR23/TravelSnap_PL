@@ -1,3 +1,4 @@
+import type { TripData } from "@/types/trip";
 import { useState } from "react";
 import {
 	Alert,
@@ -9,12 +10,7 @@ import {
 } from "react-native";
 
 type AddTripFormProps = {
-	onAddTrip: (
-		title: string,
-		destination: string,
-		date: string,
-		rating: string,
-	) => void;
+	onAddTrip: (data: TripData) => void;
 };
 
 export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
@@ -58,7 +54,12 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 			Alert.alert("Zła data", "Format: YYYY-MM (np. 2026-03)");
 			return;
 		}
-		onAddTrip(title, destination, fullDate, rating);
+		onAddTrip({
+			title,
+			destination,
+			date: fullDate,
+			rating: Number(rating),
+		});
 		setTitle("");
 		setDestination("");
 		setDateDigits("");

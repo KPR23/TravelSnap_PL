@@ -1,22 +1,17 @@
 import { ScrollView, StyleSheet, Text } from "react-native";
 
 import AddTripForm from "@/components/AddTripForm";
-import type { TripData } from "@/components/TripCard";
 import TripCard from "@/components/TripCard";
+import type { Trip, TripData } from "@/types/trip";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
-	const [trips, setTrips] = useState<TripData[]>([]);
+	const [trips, setTrips] = useState<Trip[]>([]);
 
-	const handleAddTrip = (
-		title: string,
-		destination: string,
-		date: string,
-		rating: string,
-	) => {
+	const handleAddTrip = (data: TripData) => {
 		const id = Date.now().toString();
-		setTrips((prev) => [...prev, { id, title, destination, date, rating }]);
+		setTrips((prev) => [...prev, { id, ...data }]);
 	};
 
 	const handleDeleteTrip = (id: string) => {
@@ -31,11 +26,7 @@ export default function HomeScreen() {
 				{trips.map((trip) => (
 					<TripCard
 						key={trip.id}
-						id={trip.id}
-						title={trip.title}
-						destination={trip.destination}
-						date={trip.date}
-						rating={trip.rating}
+						{...trip}
 						onDelete={() => handleDeleteTrip(trip.id)}
 					/>
 				))}

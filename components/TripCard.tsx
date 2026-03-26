@@ -1,26 +1,16 @@
 import { Button, StyleSheet, Text, View } from "react-native";
 
+import { Trip } from "@/types/trip";
 import RatingStars from "./RatingStars";
 
-export interface TripData {
-	id: string;
-	title: string;
-	destination: string;
-	date: string;
-	rating: string;
-}
-
-export type TripCardProps = TripData & {
-	onDelete: () => void;
-};
+type TripCardProps = Trip & { onDelete: () => void };
 
 export default function TripCard({
-	id,
+	onDelete,
 	title,
 	destination,
 	date,
 	rating,
-	onDelete,
 }: TripCardProps) {
 	return (
 		<View style={styles.card}>
