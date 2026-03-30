@@ -1,56 +1,47 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from "react-native";
 
-import AddTripForm from '@/components/AddTripForm';
-import TripCard from '@/components/TripCard';
-
-import type { Trip, TripData } from '@/types/trip';
+import AddTripForm from "@/components/AddTripForm";
+import TripCard from "@/components/TripCard";
+import type { Trip, TripData } from "@/types/trip";
+import { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
-  const [trips, setTrips] = useState<Trip[]>([]);
+	const [trips, setTrips] = useState<Trip[]>([]);
 
-  const handleAddTrip = (data: TripData): void => {
-    const newTrip: Trip = { id: Date.now().toString(), ...data };
-    setTrips([newTrip, ...trips]);
-  };
+	const handleAddTrip = (data: TripData) => {
+		const id = Date.now().toString();
+		setTrips((prev) => [...prev, { id, ...data }]);
+	};
 
-  const handleDeleteTrip = (id: string): void => {
-    setTrips(trips.filter((trip) => trip.id !== id));
-  };
+	const handleDeleteTrip = (id: string) => {
+		setTrips((prev) => prev.filter((trip) => trip.id !== id));
+	};
 
-  return (
-    <ScrollView contentContainerStyle={styles.content} style={styles.container}>
-      <AddTripForm onAdd={handleAddTrip} />
-
-      <Text style={styles.countText}>Total trips: {trips.length}</Text>
-
-      {trips.map((trip) => (
-        <TripCard
-          key={trip.id}
-          title={trip.title}
-          destination={trip.destination}
-          date={trip.date}
-          rating={trip.rating}
-          onDelete={() => handleDeleteTrip(trip.id)}
-        />
-      ))}
-    </ScrollView>
-  );
+	return (
+		<SafeAreaView style={styles.container}>
+			<AddTripForm onAddTrip={handleAddTrip} />
+			<Text>Liczba podróży: {trips.length}</Text>
+			<ScrollView contentContainerStyle={styles.content}>
+				{trips.map((trip) => (
+					<TripCard
+						key={trip.id}
+						{...trip}
+						onDelete={() => handleDeleteTrip(trip.id)}
+					/>
+				))}
+			</ScrollView>
+		</SafeAreaView>
+	);
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  content: {
-    padding: 16,
-  },
-  countText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-    marginLeft: 4,
-  },
+	container: {
+		flex: 1,
+		backgroundColor: "#f5f5f5",
+		padding: 16,
+	},
+	content: {
+		padding: 16,
+	},
 });

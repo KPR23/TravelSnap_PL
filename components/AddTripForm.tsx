@@ -1,123 +1,149 @@
-import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { TripData } from "@/types/trip";
+import { useState } from "react";
+import {
+	Alert,
+	Keyboard,
+	Pressable,
+	StyleSheet,
+	Text,
+	TextInput,
+	View,
+} from "react-native";
 
-import type { TripData } from '@/types/trip';
-
-interface AddTripFormProps {
-  onAdd: (trip: TripData) => void;
-}
-
-const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
-const validate = (title: string, destination: string, date: string, rating: string): string | null => {
-  if (!title.trim() || !destination.trim() || !date.trim() || !rating.trim())
-    return 'All fields are required!';
-  if (!DATE_REGEX.test(date))
-    return 'Date must be in YYYY-MM-DD format!';
-  const ratingNum = Number(rating);
-  if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5)
-    return 'Rating must be a number between 1 and 5!';
-  return null;
+type AddTripFormProps = {
+	onAddTrip: (data: TripData) => void;
 };
 
-export default function AddTripForm({ onAdd }: AddTripFormProps) {
-  const [title, setTitle] = useState('');
-  const [destination, setDestination] = useState('');
-  const [date, setDate] = useState('');
-  const [rating, setRating] = useState('');
+export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
+	const [title, setTitle] = useState("");
+	const [destination, setDestination] = useState("");
+	const [dateDigits, setDateDigits] = useState("");
+	const [rating, setRating] = useState("");
 
-  const handleSubmit = (): void => {
-    const error = validate(title, destination, date, rating);
-    if (error) {
-      Alert.alert('Error', error);
-      return;
-    }
+	const YEAR_LENGTH = 4;
+	const MONTH_LENGTH = 2;
 
-    onAdd({
-      title: title.trim(),
-      destination: destination.trim(),
-      date: date.trim(),
-      rating: Number(rating),
-    });
+	const date =
+		dateDigits.length <= YEAR_LENGTH
+			? dateDigits
+			: `${dateDigits.slice(0, YEAR_LENGTH)}-${dateDigits.slice(YEAR_LENGTH, YEAR_LENGTH + MONTH_LENGTH)}`;
 
-    setTitle('');
-    setDestination('');
-    setDate('');
-    setRating('');
-  };
+	const handleDateChange = (text: string): void => {
+		setDateDigits(text.replace(/\D/g, "").slice(0, YEAR_LENGTH + MONTH_LENGTH));
+	};
 
-  return (
-    <View style={styles.form}>
-      <Text style={styles.formTitle}>Add new trip</Text>
+	const validateRating = (rating: string): boolean => {
+		const number = Number(rating);
+		return number >= 1 && number <= 5;
+	};
 
-      <TextInput
-        style={styles.input}
-        placeholder="Title"
-        value={title}
-        onChangeText={setTitle}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Destination"
-        value={destination}
-        onChangeText={setDestination}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Date (YYYY-MM-DD)"
-        value={date}
-        onChangeText={setDate}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Rating (1-5)"
-        value={rating}
-        onChangeText={setRating}
-        keyboardType="numeric"
-      />
+	const validateDate = (date: string): boolean => {
+		return (
+			date.length === YEAR_LENGTH + MONTH_LENGTH + 1 &&
+			date[4] === "-" &&
+			Number(
+				date.slice(YEAR_LENGTH + MONTH_LENGTH, YEAR_LENGTH + MONTH_LENGTH + 1),
+			) >= 1 &&
+			Number(
+				date.slice(YEAR_LENGTH + MONTH_LENGTH, YEAR_LENGTH + MONTH_LENGTH + 1),
+			) <= 12 &&
+			Number(date.slice(0, YEAR_LENGTH)) <= new Date().getFullYear()
+		);
+	};
 
-      <Pressable style={styles.addButton} onPress={handleSubmit}>
-        <Text style={styles.addButtonText}>Add Trip</Text>
-      </Pressable>
-    </View>
-  );
+	const handleAddTrip = (): void => {
+		Keyboard.dismiss();
+
+		if (!title || !destination || !dateDigits || !rating) {
+			Alert.alert("Wypełnij wszystkie pola");
+			return;
+		}
+
+		const isRatingValid = validateRating(rating);
+		if (!isRatingValid) {
+			Alert.alert("Zła ocena", "Ocena musi być między 1 a 5");
+			return;
+		}
+
+		const isDateValid = validateDate(date);
+		if (!isDateValid) {
+			Alert.alert("Zła data", "Format: YYYY-MM (np. 2026-03)");
+			return;
+		}
+
+		const fullDate =
+			date.length === YEAR_LENGTH + MONTH_LENGTH
+				? `${date.slice(0, YEAR_LENGTH)}-${date.slice(YEAR_LENGTH, YEAR_LENGTH + MONTH_LENGTH)}`
+				: date;
+
+		onAddTrip({
+			title,
+			destination,
+			date: fullDate,
+			rating: Number(rating),
+		});
+		setTitle("");
+		setDestination("");
+		setDateDigits("");
+		setRating("");
+	};
+
+	return (
+		<View style={styles.container}>
+			<TextInput
+				placeholder="Tytuł"
+				style={styles.input}
+				value={title}
+				onChangeText={setTitle}
+			/>
+			<TextInput
+				placeholder="Destynacja"
+				style={styles.input}
+				value={destination}
+				onChangeText={setDestination}
+			/>
+			<TextInput
+				style={styles.input}
+				value={date}
+				onChangeText={handleDateChange}
+				keyboardType="numeric"
+				placeholder="YYYY-MM"
+				maxLength={7}
+			/>
+			<TextInput
+				placeholder="Ocena (1-5)"
+				style={styles.input}
+				onChangeText={(text) => setRating(text)}
+				value={rating}
+				keyboardType="numeric"
+			/>
+			<Pressable onPress={handleAddTrip} style={styles.button}>
+				<Text style={styles.buttonText}>Dodaj</Text>
+			</Pressable>
+		</View>
+	);
 }
 
 const styles = StyleSheet.create({
-  form: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 24,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#1a1a2e',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
-  },
-  addButton: {
-    backgroundColor: '#e94560',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
+	container: {
+		gap: 10,
+		padding: 16,
+	},
+	input: {
+		borderWidth: 1,
+		borderColor: "#ccc",
+		borderRadius: 8,
+		padding: 8,
+	},
+	button: {
+		backgroundColor: "#345834",
+		padding: 10,
+		borderRadius: 8,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	buttonText: {
+		color: "#fff",
+		fontSize: 16,
+	},
 });
