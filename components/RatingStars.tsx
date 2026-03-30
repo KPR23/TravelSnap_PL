@@ -1,7 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import type { ReactElement } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 interface RatingStarsProps {
 	rating: number;
 	maxStars?: number;
@@ -16,13 +16,13 @@ export default function RatingStars({
 
 	for (let i = 1; i <= maxStars; i++) {
 		stars.push(
-			<Text key={i} style={styles.star}>
+			<View key={i} style={styles.starContainer}>
 				{i <= normalizedRating ? (
-					<Ionicons name="star" size={16} color={Colors.accent} />
+					<Ionicons name="star" style={styles.starIcon} />
 				) : (
-					<Ionicons name="star-outline" size={16} color={Colors.accent} />
+					<Ionicons name="star-outline" style={styles.starIcon} />
 				)}
-			</Text>,
+			</View>,
 		);
 	}
 
@@ -34,7 +34,12 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		marginTop: 2,
 	},
-	star: {
+	starContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	starIcon: {
 		fontSize: 16,
 		color: Colors.accent,
 		marginRight: 2,
