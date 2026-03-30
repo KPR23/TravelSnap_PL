@@ -1,3 +1,4 @@
+import { Colors } from "@/constants/Colors";
 import type { TripData } from "@/types/trip";
 import { useState } from "react";
 import {
@@ -92,12 +93,14 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 		<View style={styles.container}>
 			<TextInput
 				placeholder="Tytuł"
+				placeholderTextColor={Colors.textSecondary}
 				style={styles.input}
 				value={title}
 				onChangeText={setTitle}
 			/>
 			<TextInput
 				placeholder="Destynacja"
+				placeholderTextColor={Colors.textSecondary}
 				style={styles.input}
 				value={destination}
 				onChangeText={setDestination}
@@ -108,10 +111,12 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 				onChangeText={handleDateChange}
 				keyboardType="numeric"
 				placeholder="YYYY-MM"
+				placeholderTextColor={Colors.textSecondary}
 				maxLength={7}
 			/>
 			<TextInput
 				placeholder="Ocena (1-5)"
+				placeholderTextColor={Colors.textSecondary}
 				style={styles.input}
 				onChangeText={(text) => setRating(text)}
 				value={rating}
@@ -128,22 +133,26 @@ const styles = StyleSheet.create({
 	container: {
 		gap: 10,
 		padding: 16,
+		backgroundColor: Colors.card,
+		borderRadius: 16,
 	},
 	input: {
 		borderWidth: 1,
-		borderColor: "#ccc",
 		borderRadius: 8,
 		padding: 8,
+		backgroundColor: Colors.inputBg,
+		borderColor: Colors.inputBorder,
+		color: Colors.textPrimary,
 	},
 	button: {
-		backgroundColor: "#345834",
+		backgroundColor: Colors.accent,
 		padding: 10,
-		borderRadius: 8,
 		alignItems: "center",
 		justifyContent: "center",
+		borderRadius: 12,
 	},
 	buttonText: {
-		color: "#fff",
+		color: Colors.textPrimary,
 		fontSize: 16,
 	},
 });
