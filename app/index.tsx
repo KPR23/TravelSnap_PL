@@ -1,9 +1,10 @@
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 
-import { Colors } from "@/constants/Colors";
 import AddTripForm from "@/components/AddTripForm";
+import EmptyState from "@/components/EmptyState";
 import ScreenHeader from "@/components/ScreenHeader";
 import TripCard from "@/components/TripCard";
+import { Colors } from "@/constants/Colors";
 import type { Trip, TripData } from "@/types/trip";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,15 +25,18 @@ export default function HomeScreen() {
 		<SafeAreaView style={styles.container}>
 			<ScreenHeader tripCount={trips.length} />
 			<AddTripForm onAddTrip={handleAddTrip} />
-			<Text>Liczba podróży: {trips.length}</Text>
 			<ScrollView contentContainerStyle={styles.content}>
-				{trips.map((trip) => (
-					<TripCard
-						key={trip.id}
-						{...trip}
-						onDelete={() => handleDeleteTrip(trip.id)}
-					/>
-				))}
+				{trips.length === 0 ? (
+					<EmptyState />
+				) : (
+					trips.map((trip) => (
+						<TripCard
+							key={trip.id}
+							{...trip}
+							onDelete={() => handleDeleteTrip(trip.id)}
+						/>
+					))
+				)}
 			</ScrollView>
 		</SafeAreaView>
 	);
