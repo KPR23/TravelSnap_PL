@@ -26,8 +26,9 @@ export default function HomeScreen() {
 			? trips.reduce((acc, trip) => acc + trip.rating, 0) / trips.length
 			: 0;
 
-	const uniqueDestinations = new Set(trips.map((trip) => trip.destination))
-		.size;
+	const uniqueDestinations = new Set(
+		trips.map((trip) => trip.destination.toLowerCase().trim()),
+	).size;
 
 	return (
 		<SafeAreaView style={styles.container}>
