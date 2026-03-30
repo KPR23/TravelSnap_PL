@@ -1,6 +1,8 @@
 import { ScrollView, StyleSheet, Text } from "react-native";
 
+import { Colors } from "@/constants/Colors";
 import AddTripForm from "@/components/AddTripForm";
+import ScreenHeader from "@/components/ScreenHeader";
 import TripCard from "@/components/TripCard";
 import type { Trip, TripData } from "@/types/trip";
 import { useState } from "react";
@@ -20,6 +22,7 @@ export default function HomeScreen() {
 
 	return (
 		<SafeAreaView style={styles.container}>
+			<ScreenHeader tripCount={trips.length} />
 			<AddTripForm onAddTrip={handleAddTrip} />
 			<Text>Liczba podróży: {trips.length}</Text>
 			<ScrollView contentContainerStyle={styles.content}>
@@ -38,7 +41,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#f5f5f5",
+		backgroundColor: Colors.background,
 		padding: 16,
 	},
 	content: {
