@@ -19,7 +19,7 @@ export default function TripCard({
 			<Text style={styles.meta}>
 				{destination} | {date}
 			</Text>
-			<RatingStars rating={Number(rating)} />
+			<RatingStars rating={rating} />
 			<Pressable onPress={onDelete} style={styles.deleteButton}>
 				<Text style={styles.deleteButtonText}>Usuń</Text>
 			</Pressable>

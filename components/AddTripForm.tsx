@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/Colors";
+import { MONTH_LENGTH, YEAR_LENGTH } from "@/constants/Constants";
 import type { TripData } from "@/types/trip";
 import { useState } from "react";
 import {
@@ -21,9 +22,6 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 	const [dateDigits, setDateDigits] = useState("");
 	const [rating, setRating] = useState("");
 
-	const YEAR_LENGTH = 4;
-	const MONTH_LENGTH = 2;
-
 	const date =
 		dateDigits.length <= YEAR_LENGTH
 			? dateDigits
@@ -39,15 +37,16 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 	};
 
 	const validateDate = (date: string): boolean => {
+		const monthStr = date.slice(
+			YEAR_LENGTH + 1,
+			YEAR_LENGTH + 1 + MONTH_LENGTH,
+		);
+		const month = Number(monthStr);
 		return (
-			date.length === YEAR_LENGTH + MONTH_LENGTH + 1 &&
-			date[4] === "-" &&
-			Number(
-				date.slice(YEAR_LENGTH + MONTH_LENGTH, YEAR_LENGTH + MONTH_LENGTH + 1),
-			) >= 1 &&
-			Number(
-				date.slice(YEAR_LENGTH + MONTH_LENGTH, YEAR_LENGTH + MONTH_LENGTH + 1),
-			) <= 12 &&
+			date.length === YEAR_LENGTH + 1 + MONTH_LENGTH &&
+			date[YEAR_LENGTH] === "-" &&
+			month >= 1 &&
+			month <= 12 &&
 			Number(date.slice(0, YEAR_LENGTH)) <= new Date().getFullYear()
 		);
 	};
@@ -72,15 +71,10 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 			return;
 		}
 
-		const fullDate =
-			date.length === YEAR_LENGTH + MONTH_LENGTH
-				? `${date.slice(0, YEAR_LENGTH)}-${date.slice(YEAR_LENGTH, YEAR_LENGTH + MONTH_LENGTH)}`
-				: date;
-
 		onAddTrip({
 			title,
 			destination,
-			date: fullDate,
+			date,
 			rating: Number(rating),
 		});
 		setTitle("");

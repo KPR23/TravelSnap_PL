@@ -1,5 +1,3 @@
-import { ScrollView, StyleSheet } from "react-native";
-
 import AddTripForm from "@/components/AddTripForm";
 import EmptyState from "@/components/EmptyState";
 import ScreenHeader from "@/components/ScreenHeader";
@@ -8,6 +6,7 @@ import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import type { Trip, TripData } from "@/types/trip";
 import { useState } from "react";
+import { ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
