@@ -4,6 +4,7 @@ import AddTripForm from "@/components/AddTripForm";
 import EmptyState from "@/components/EmptyState";
 import ScreenHeader from "@/components/ScreenHeader";
 import TripCard from "@/components/TripCard";
+import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import type { Trip, TripData } from "@/types/trip";
 import { useState } from "react";
@@ -21,9 +22,22 @@ export default function HomeScreen() {
 		setTrips((prev) => prev.filter((trip) => trip.id !== id));
 	};
 
+	const averageRating =
+		trips.length > 0
+			? trips.reduce((acc, trip) => acc + trip.rating, 0) / trips.length
+			: 0;
+
+	const uniqueDestinations = new Set(trips.map((trip) => trip.destination))
+		.size;
+
 	return (
 		<SafeAreaView style={styles.container}>
 			<ScreenHeader tripCount={trips.length} />
+			<TripStats
+				tripCount={trips.length}
+				averageRating={averageRating}
+				uniqueDestinations={uniqueDestinations}
+			/>
 			<AddTripForm onAddTrip={handleAddTrip} />
 			<ScrollView contentContainerStyle={styles.content}>
 				{trips.length === 0 ? (
