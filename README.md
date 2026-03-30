@@ -1,56 +1,167 @@
-# TravelSnap
+# Zajęcia 4 — Zadanie praktyczne
 
-Projekt przewodni kursu **Mobilne języki programowania — React Native z Expo**.
-TravelSnap to aplikacja — dziennik podróży, rozwijana na żywo, lekcja po lekcji.
+## Od prototypu do prawdziwej apki
 
-## 📚 Kontekst kursu
+Po tym zadaniu TravelSnap wygląda jak prawdziwa aplikacja - z brandingiem, spójnym designem i przemyślanym layoutem.
 
-- **Czas trwania:** 30 godzin dydaktycznych (15 spotkań × 2h)
-- **Technologie:** React Native, Expo, Expo Router, TypeScript
-- **Cel:** Zbudowanie w pełni funkcjonalnej aplikacji mobilnej od zera do wdrożenia.
+---
 
-## 🚀 Jak uruchomić projekt
+## Krok 0: Paleta kolorów (`constants/Colors.ts`)
 
-1. Sklonuj repozytorium
-2. Zainstaluj zależności:
-   ```bash
-   npm install
-   ```
-3. Uruchom serwer deweloperski:
-   ```bash
-   npx expo start
-   ```
-4. Otwórz aplikację w **Expo Go** na telefonie lub emulatorze.
+Zanim zaczniesz kodować - stwórz plik ze stałymi kolorami. **Nigdy nie hardcoduj kolorów bezpośrednio w StyleSheet.**
 
-## 📂 Struktura i branche
+```ts
+// constants/Colors.ts
+export const Colors = {
+  background:    '#0F1A2E',  // tło ekranu — ciemny granat
+  card:          '#1A2742',  // tło kart — jaśniejszy granat
+  accent:        '#E94560',  // akcent — czerwony/różowy
+  primary:       '#61DAFB',  // React Blue — linki, daty
+  textPrimary:   '#FFFFFF',  // główny tekst — biały
+  textSecondary: '#8B95A5',  // drugorzędny tekst — szary
+  inputBg:       '#243352',  // tło inputów w formularzu
+  inputBorder:   '#2E4066',  // obramowanie inputów
+  border:        '#2E3A50',  // subtelne linie oddzielające
+} as const;
+```
 
-Repozytorium używa branchy jako migawek kodu po każdej lekcji:
+Importuj ten plik w każdym komponencie zamiast wpisywać kolory ręcznie.
 
-- `master` / `main` — najaktualniejszy kod
-- `lesson-1` — szkielet projektu i ekran powitalny
-- `lesson-2` — JSX, komponenty i propsy (`TripCard`, `RatingStars`)
-- `lesson-3` - State, hooks (useState), oraz interaktywny formularz dodawania wycieczki.
+---
 
-*(kolejne branche będą dodawane w trakcie kursu)*
+## Krok 1: `ScreenHeader`
 
-## 🗺️ Plan kursu
+Stwórz nowy komponent `components/ScreenHeader.tsx`.
 
-1. **Lekcja 1:** Wstęp do React Native i Expo. Inicjalizacja projektu.
-2. **Lekcja 2:** JSX, komponenty, propsy (`TripCard`, `RatingStars`).
-3. **Lekcja 3:** Stan i hooki (`useState`), interaktywny formularz dodawania podróży.
-4. **Lekcja 4:** Stylowanie (`StyleSheet`) i układy Flexbox.
-5. **Lekcja 5:** Nawigacja z Expo Router (Stack + Tabs).
-6. **Lekcja 6:** Wydajne listy z `FlatList`.
-7. **Lekcja 7:** Zaawansowane formularze i walidacja.
-8. **Lekcja 8:** Globalny stan z Context API.
-9. **Lekcja 9:** Persystencja danych z AsyncStorage.
-10. **Lekcja 10:** Integracja REST API (`fetch`).
-11. **Lekcja 11:** Multimedia: kamera i galeria (`expo-image-picker`).
-12. **Lekcja 12:** Lokalizacja i mapy (`react-native-maps`).
-13. **Lekcja 13:** Animacje i dopracowanie UX.
-14. **Lekcja 14:** Przygotowanie do buildu i dystrybucji (EAS).
-15. **Lekcja 15:** Code review, testy i podsumowanie.
+**Co ma wyświetlać:**
+- Po lewej: **„TravelSnap"** (duży, bold, biały) + pod spodem **„Twój dziennik podróży"** (mały, `textSecondary`)
+- Po prawej: kółko z liczbą podróży (np. „3") - tło `accent`, biały tekst, okrągłe
 
-## 📊 Prezentacje
+**Wymagania techniczne:**
+- Tło: `Colors.background`
+- Layout: `flexDirection: 'row'`, `justifyContent: 'space-between'`, `alignItems: 'center'`
+- Padding: 20 góra, 16 boki, 12 dół
+- Kółko z liczbą: `width: 36`, `height: 36`, `borderRadius: 18`
 
-Slajdy wykładowe (`.pptx`) dostępne są w katalogu `presentations/` tego repozytorium.
+**Props:**
+
+```ts
+interface ScreenHeaderProps {
+  tripCount: number;
+}
+```
+
+**Podpowiedź struktury:**
+
+```tsx
+<View style={styles.header}>
+  <View>                          {/* lewa strona: column */}
+    <Text style={styles.appName}>TravelSnap</Text>
+    <Text style={styles.subtitle}>Twój dziennik podróży</Text>
+  </View>
+  <View style={styles.badge}>    {/* prawa strona: kółko */}
+    <Text style={styles.badgeText}>{tripCount}</Text>
+  </View>
+</View>
+```
+
+---
+
+## Krok 2: TripCard — dark restyle
+
+Przeróbcie istniejący `TripCard` - **nie piszecie od zera**, modyfikujecie to co macie.
+
+**Design spec:**
+
+| Element | Wartość |
+|---------|---------|
+| Tło karty | `Colors.card` (`#1A2742`) |
+| `borderRadius` | `16` (zmniejszcie z 32) |
+| `padding` | `16` |
+| `marginBottom` | `12` |
+| Cień (iOS) | `shadowColor: '#000'`, `shadowOpacity: 0.2`, `shadowRadius: 8` |
+| Cień (Android) | `elevation: 4` |
+| Tytuł | biały (`Colors.textPrimary`), `fontSize: 18`, `fontWeight: 'bold'` |
+| Meta (destination \| date) | `Colors.textSecondary`, `fontSize: 13`, `marginTop: 4` |
+| Przycisk usuwania | tło `accent` z opacity 0.15, `borderRadius: 12`, `padding: 6` |
+| Gwiazdki | Ionicons `star` / `star-outline`, kolor `Colors.accent`, `size: 16` |
+
+**Gwiazdki:** zamieńcie emoji (`★`/`☆`) na Ionicons (`import { Ionicons } from '@expo/vector-icons'` - wbudowane w Expo, zero instalacji).
+
+---
+
+## Krok 3: `EmptyState`
+
+Nowy komponent `components/EmptyState.tsx`.
+
+**Kiedy:** wyświetlany w `index.tsx` gdy `trips.length === 0` (zamiast pustej listy).
+
+**Co wyświetla:**
+- Duża ikona: Ionicons `airplane-outline`, `size: 64`, kolor `Colors.primary`
+- Tekst główny: **„Brak podróży"** — biały, `fontSize: 20`, bold
+- Tekst pomocniczy: **„Dodaj swoją pierwszą podróż!"** — `Colors.textSecondary`, `fontSize: 14`
+
+**Layout:**
+- `justifyContent: 'center'`, `alignItems: 'center'`
+- `gap: 12` między elementami
+
+**Uwaga:** `EmptyState` z `flex: 1` nie zadziała dobrze w `ScrollView`. Użyj jawnej wysokości, np. `height: 300`.
+
+**Props:** brak - to czysty komponent prezentacyjny.
+
+---
+
+## Krok 4: Złóż to w całość (`index.tsx`)
+
+1. Zmień `backgroundColor` kontenera na `Colors.background`
+2. Dodaj `<ScreenHeader tripCount={trips.length} />` na górze
+3. Usuń stary `<Text>Total trips: ...</Text>`
+4. Gdy `trips.length === 0` — pokaż `<EmptyState />`
+5. Gdy `trips.length > 0` — pokaż listę kart jak dotychczas
+
+**Oczekiwana struktura:**
+
+```tsx
+<ScrollView
+  style={{ flex: 1, backgroundColor: Colors.background }}
+  contentContainerStyle={{ padding: 16 }}
+>
+  <ScreenHeader tripCount={trips.length} />
+  <AddTripForm onAdd={handleAddTrip} />
+  {trips.length === 0
+    ? <EmptyState />
+    : trips.map(trip => (
+        <TripCard
+          key={trip.id}
+          {...trip}
+          onDelete={() => handleDeleteTrip(trip.id)}
+        />
+      ))
+  }
+</ScrollView>
+```
+
+---
+
+## Krok 5: AddTripForm restyle
+
+Dostosujcie formularz do ciemnego theme:
+- Tło formularza: `Colors.card`
+- Inputy: tło `Colors.inputBg`, border `Colors.inputBorder`, tekst biały, placeholder `Colors.textSecondary`
+- Tytuł formularza: biały
+- Przycisk: tło `Colors.accent`, biały tekst, `borderRadius: 12`
+
+## Krok 6: TripStats
+
+Nowy komponent pod headerem — pasek z 3 kafelkami w rzędzie:
+
+- **„Podróże"** — `trips.length`
+- **„Śr. ocena"** — średnia rating (`.toFixed(1)`)
+- **„Kraje"** — unikalne destinations (`new Set(...).size`)
+
+Layout: `flexDirection: 'row'`, każdy kafelek `flex: 1`, tło `Colors.card`, `padding: 12`, `gap: 8`.
+Każdy kafelek: liczba (duża, bold, `Colors.primary`) + label pod spodem (mały, `Colors.textSecondary`).
+
+## Krok 7: StatusBar + SafeArea
+
+Dodajcie `StatusBar` z `barStyle="light-content"` i opakujcie ekran w `SafeAreaView`, żeby content nie wchodził pod notch.
