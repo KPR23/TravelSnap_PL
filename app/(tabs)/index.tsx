@@ -1,23 +1,66 @@
-import AddTripForm from "@/components/AddTripForm";
 import EmptyState from "@/components/EmptyState";
 import ScreenHeader from "@/components/ScreenHeader";
 import TripCard from "@/components/TripCard";
 import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
-import type { Trip, TripData } from "@/types/trip";
-import { Link } from "expo-router";
-import { useState } from "react";
-import { ScrollView, StyleSheet } from "react-native";
+import type { Trip } from "@/types/trip";
+import { Ionicons } from "@expo/vector-icons";
+import { Link, router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
 	const [trips, setTrips] = useState<Trip[]>([]);
+	const {
+		newTripId,
+		newTripTitle,
+		newTripDestination,
+		newTripDate,
+		newTripRating,
+	} = useLocalSearchParams<{
+		newTripId?: string;
+		newTripTitle?: string;
+		newTripDestination?: string;
+		newTripDate?: string;
+		newTripRating?: string;
+	}>();
 
-	const handleAddTrip = (data: TripData) => {
-		const id = Date.now().toString();
-		setTrips((prev) => [...prev, { id, ...data }]);
-	};
+	useEffect(() => {
+		if (
+			!newTripId ||
+			!newTripTitle ||
+			!newTripDestination ||
+			!newTripDate ||
+			!newTripRating
+		) {
+			return;
+		}
+
+		const rating = Number(newTripRating);
+		if (Number.isNaN(rating)) {
+			return;
+		}
+
+		setTrips((prev) => [
+			...prev,
+			{
+				id: newTripId,
+				title: newTripTitle,
+				destination: newTripDestination,
+				date: newTripDate,
+				rating,
+			},
+		]);
+		router.setParams({
+			newTripId: undefined,
+			newTripTitle: undefined,
+			newTripDestination: undefined,
+			newTripDate: undefined,
+			newTripRating: undefined,
+		});
+	}, [newTripId, newTripTitle, newTripDestination, newTripDate, newTripRating]);
 
 	const handleDeleteTrip = (id: string) => {
 		setTrips((prev) => prev.filter((trip) => trip.id !== id));
@@ -45,7 +88,6 @@ export default function HomeScreen() {
 				averageRating={averageRating}
 				uniqueDestinations={uniqueDestinations}
 			/>
-			<AddTripForm onAddTrip={handleAddTrip} />
 			<ScrollView contentContainerStyle={styles.content}>
 				{trips.length === 0 ? (
 					<EmptyState />
@@ -70,6 +112,9 @@ export default function HomeScreen() {
 					))
 				)}
 			</ScrollView>
+			<Pressable style={styles.fab} onPress={() => router.push("/add-trip")}>
+				<Ionicons name="add" size={30} color={Colors.background} />
+			</Pressable>
 		</SafeAreaView>
 	);
 }
@@ -82,6 +127,21 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		paddingTop: Spacing.lg,
-		paddingBottom: Spacing.xl,
+		paddingBottom: Spacing.xl + 72,
+	},
+	fab: {
+		position: "absolute",
+		right: Spacing.lg,
+		bottom: Spacing.xl,
+		width: 56,
+		height: 56,
+		borderRadius: 28,
+		backgroundColor: Colors.primary,
+		alignItems: "center",
+		justifyContent: "center",
+		shadowColor: "#000",
+		shadowOpacity: 0.3,
+		shadowRadius: 6,
+		elevation: 6,
 	},
 });

@@ -39,7 +39,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: Colors.background,
 		paddingHorizontal: Spacing.lg,
-		gap: Spacing.xs,
 	},
 	header: {
 		flexDirection: "row",
