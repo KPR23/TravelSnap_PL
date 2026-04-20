@@ -20,6 +20,7 @@ export default function RootLayout() {
 					name="trip/[id]"
 					options={{
 						headerShown: true,
+						// Najbardziej mi sie podoba defaultowa animacja
 						animation: "default",
 						headerBackButtonDisplayMode: "default",
 						headerBackTitle: "Powrót",
