@@ -37,7 +37,6 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		paddingTop: Spacing.lg,
 		backgroundColor: Colors.background,
 		paddingHorizontal: Spacing.lg,
 		gap: Spacing.xs,
