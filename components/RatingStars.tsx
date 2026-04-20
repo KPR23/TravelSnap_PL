@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/Colors";
+import { Spacing } from "@/constants/Spacing";
 import { Ionicons } from "@expo/vector-icons";
 import type { ReactElement } from "react";
 import { StyleSheet, View } from "react-native";
@@ -32,7 +33,7 @@ export default function RatingStars({
 const styles = StyleSheet.create({
 	row: {
 		flexDirection: "row",
-		marginTop: 2,
+		marginTop: Spacing.xs - 2,
 	},
 	starContainer: {
 		flexDirection: "row",
@@ -42,6 +43,6 @@ const styles = StyleSheet.create({
 	starIcon: {
 		fontSize: 16,
 		color: Colors.accent,
-		marginRight: 2,
+		marginRight: Spacing.xs - 2,
 	},
 });

@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/Colors";
+import { Spacing } from "@/constants/Spacing";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -17,7 +18,8 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
-		gap: 12,
+		gap: Spacing.md,
+		paddingHorizontal: Spacing.lg,
 	},
 	title: {
 		fontSize: 20,

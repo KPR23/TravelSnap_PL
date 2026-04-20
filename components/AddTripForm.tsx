@@ -1,5 +1,6 @@
 import { Colors } from "@/constants/Colors";
 import { MONTH_LENGTH, YEAR_LENGTH } from "@/constants/Constants";
+import { Spacing } from "@/constants/Spacing";
 import type { TripData } from "@/types/trip";
 import { useState } from "react";
 import {
@@ -125,25 +126,25 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 
 const styles = StyleSheet.create({
 	container: {
-		gap: 10,
-		padding: 16,
+		gap: Spacing.sm,
+		padding: Spacing.lg,
 		backgroundColor: Colors.card,
-		borderRadius: 16,
+		borderRadius: Spacing.lg,
 	},
 	input: {
 		borderWidth: 1,
-		borderRadius: 8,
-		padding: 8,
+		borderRadius: Spacing.sm,
+		padding: Spacing.sm,
 		backgroundColor: Colors.inputBg,
 		borderColor: Colors.inputBorder,
 		color: Colors.textPrimary,
 	},
 	button: {
 		backgroundColor: Colors.accent,
-		padding: 10,
+		paddingVertical: Spacing.sm + Spacing.xs,
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: 12,
+		borderRadius: Spacing.md,
 	},
 	buttonText: {
 		color: Colors.textPrimary,

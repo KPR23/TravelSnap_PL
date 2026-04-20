@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/Colors";
+import { Spacing } from "@/constants/Spacing";
 import { StyleSheet, Text, View } from "react-native";
 
 interface TripStatsProps {
@@ -35,14 +36,14 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		gap: 8,
-		marginBottom: 12,
+		gap: Spacing.sm,
+		marginBottom: Spacing.md,
 	},
 	stat: {
 		flex: 1,
 		backgroundColor: Colors.card,
-		padding: 12,
-		borderRadius: 12,
+		padding: Spacing.md,
+		borderRadius: Spacing.md,
 		alignItems: "center",
 		justifyContent: "center",
 	},

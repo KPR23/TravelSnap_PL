@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Colors } from "@/constants/Colors";
+import { Spacing } from "@/constants/Spacing";
 import { Trip } from "@/types/trip";
 import RatingStars from "./RatingStars";
 
@@ -30,9 +31,9 @@ export default function TripCard({
 const styles = StyleSheet.create({
 	card: {
 		backgroundColor: Colors.card,
-		padding: 16,
-		borderRadius: 16,
-		marginBottom: 12,
+		padding: Spacing.lg,
+		borderRadius: Spacing.lg,
+		marginBottom: Spacing.md,
 		shadowColor: "#000",
 		shadowOpacity: 0.2,
 		shadowRadius: 8,
@@ -46,14 +47,15 @@ const styles = StyleSheet.create({
 	meta: {
 		fontSize: 13,
 		color: Colors.textSecondary,
-		marginTop: 4,
+		marginTop: Spacing.xs,
 	},
 	deleteButton: {
 		alignSelf: "flex-start",
-		marginTop: 12,
+		marginTop: Spacing.md,
 		backgroundColor: `${Colors.accent}26`,
-		borderRadius: 12,
-		padding: 6,
+		borderRadius: Spacing.md,
+		paddingHorizontal: Spacing.sm,
+		paddingVertical: Spacing.xs + 2,
 	},
 	deleteButtonText: {
 		color: Colors.accent,

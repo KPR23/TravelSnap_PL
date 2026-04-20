@@ -1,34 +1,43 @@
 import { Colors } from "@/constants/Colors";
+import { Spacing } from "@/constants/Spacing";
 import { StyleSheet, Text, View } from "react-native";
 
 interface ScreenHeaderProps {
-	tripCount: number;
+	title: string;
+	subtitle: string;
+	showBadge: boolean;
+	tripCount?: number;
 }
 
-export default function ScreenHeader({ tripCount }: ScreenHeaderProps) {
+export default function ScreenHeader({
+	tripCount,
+	title,
+	subtitle,
+	showBadge,
+}: ScreenHeaderProps) {
 	return (
 		<View style={styles.container}>
 			<View>
-				<Text style={styles.title}>TravelSnap</Text>
-				<Text style={styles.subtitle}>Twój dziennik podróży</Text>
+				<Text style={styles.title}>{title}</Text>
+				<Text style={styles.subtitle}>{subtitle}</Text>
 			</View>
-			<View style={styles.badgeContainer}>
-				<Text style={styles.badgeText}>{tripCount}</Text>
-			</View>
+			{showBadge && (
+				<View style={styles.badgeContainer}>
+					<Text style={styles.badgeText}>{tripCount}</Text>
+				</View>
+			)}
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
 	container: {
-		paddingTop: 20,
-		paddingBottom: 12,
-		paddingLeft: 16,
-		paddingRight: 16,
+		paddingTop: Spacing.sm,
+		paddingBottom: Spacing.lg,
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		gap: 4,
+		gap: Spacing.xs,
 	},
 	title: {
 		fontSize: 24,

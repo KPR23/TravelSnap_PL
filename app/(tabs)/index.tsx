@@ -4,6 +4,7 @@ import ScreenHeader from "@/components/ScreenHeader";
 import TripCard from "@/components/TripCard";
 import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
+import { Spacing } from "@/constants/Spacing";
 import type { Trip, TripData } from "@/types/trip";
 import { useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
@@ -32,7 +33,12 @@ export default function HomeScreen() {
 
 	return (
 		<SafeAreaView style={styles.container}>
-			<ScreenHeader tripCount={trips.length} />
+			<ScreenHeader
+				tripCount={trips.length}
+				title="TravelSnap"
+				subtitle="Twój dziennik podróży"
+				showBadge={true}
+			/>
 			<TripStats
 				tripCount={trips.length}
 				averageRating={averageRating}
@@ -60,9 +66,10 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: Colors.background,
-		padding: 16,
+		paddingHorizontal: Spacing.lg,
 	},
 	content: {
-		padding: 16,
+		paddingTop: Spacing.lg,
+		paddingBottom: Spacing.xl,
 	},
 });
