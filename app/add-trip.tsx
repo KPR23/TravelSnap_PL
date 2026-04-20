@@ -32,9 +32,10 @@ export default function AddTripScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: Colors.background,
+		backgroundColor: Colors.card,
 	},
 	content: {
+		flex: 1,
 		padding: 16,
 	},
 });

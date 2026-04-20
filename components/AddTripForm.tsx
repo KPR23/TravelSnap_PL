@@ -86,37 +86,39 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 
 	return (
 		<View style={styles.container}>
-			<TextInput
-				placeholder="Tytuł"
-				placeholderTextColor={Colors.textSecondary}
-				style={styles.input}
-				value={title}
-				onChangeText={setTitle}
-			/>
-			<TextInput
-				placeholder="Destynacja"
-				placeholderTextColor={Colors.textSecondary}
-				style={styles.input}
-				value={destination}
-				onChangeText={setDestination}
-			/>
-			<TextInput
-				style={styles.input}
-				value={date}
-				onChangeText={handleDateChange}
-				keyboardType="numeric"
-				placeholder="YYYY-MM"
-				placeholderTextColor={Colors.textSecondary}
-				maxLength={7}
-			/>
-			<TextInput
-				placeholder="Ocena (1-5)"
-				placeholderTextColor={Colors.textSecondary}
-				style={styles.input}
-				onChangeText={(text) => setRating(text)}
-				value={rating}
-				keyboardType="numeric"
-			/>
+			<View style={styles.formFields}>
+				<TextInput
+					placeholder="Tytuł"
+					placeholderTextColor={Colors.textSecondary}
+					style={styles.input}
+					value={title}
+					onChangeText={setTitle}
+				/>
+				<TextInput
+					placeholder="Destynacja"
+					placeholderTextColor={Colors.textSecondary}
+					style={styles.input}
+					value={destination}
+					onChangeText={setDestination}
+				/>
+				<TextInput
+					style={styles.input}
+					value={date}
+					onChangeText={handleDateChange}
+					keyboardType="numeric"
+					placeholder="YYYY-MM"
+					placeholderTextColor={Colors.textSecondary}
+					maxLength={7}
+				/>
+				<TextInput
+					placeholder="Ocena (1-5)"
+					placeholderTextColor={Colors.textSecondary}
+					style={styles.input}
+					onChangeText={(text) => setRating(text)}
+					value={rating}
+					keyboardType="numeric"
+				/>
+			</View>
 			<Pressable onPress={handleAddTrip} style={styles.button}>
 				<Text style={styles.buttonText}>Dodaj</Text>
 			</Pressable>
@@ -126,10 +128,12 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 
 const styles = StyleSheet.create({
 	container: {
+		flex: 1,
 		gap: Spacing.sm,
-		padding: Spacing.lg,
-		backgroundColor: Colors.card,
 		borderRadius: Spacing.lg,
+	},
+	formFields: {
+		gap: Spacing.sm,
 	},
 	input: {
 		borderWidth: 1,
@@ -145,6 +149,7 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		borderRadius: Spacing.md,
+		marginTop: "auto",
 	},
 	buttonText: {
 		color: Colors.textPrimary,

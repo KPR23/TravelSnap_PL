@@ -30,6 +30,10 @@ export default function RootLayout() {
 					name="add-trip"
 					options={{
 						headerShown: true,
+						headerStyle: {
+							backgroundColor: Colors.card,
+						},
+						headerTintColor: Colors.primary,
 						title: "Dodaj podróż",
 						presentation: "modal",
 					}}
