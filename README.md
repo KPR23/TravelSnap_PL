@@ -1,177 +1,172 @@
-# Zajęcia 4 — Zadanie praktyczne
+# Zadanie 5 - Nawigacja i routing w TravelSnap
 
-## Od prototypu do prawdziwej apki
+## Cel
 
-Po tym zadaniu TravelSnap wygląda jak prawdziwa aplikacja - z brandingiem, spójnym designem i przemyślanym layoutem.
-
----
-
-## Krok 0: Paleta kolorów (`constants/Colors.ts`)
-
-Zanim zaczniesz kodować - stwórz plik ze stałymi kolorami. **Nigdy nie hardcoduj kolorów bezpośrednio w StyleSheet.**
-
-```ts
-// constants/Colors.ts
-export const Colors = {
-	background: "#0F1A2E", // tło ekranu — ciemny granat
-	card: "#1A2742", // tło kart — jaśniejszy granat
-	accent: "#E94560", // akcent — czerwony/różowy
-	primary: "#61DAFB", // React Blue — linki, daty
-	textPrimary: "#FFFFFF", // główny tekst — biały
-	textSecondary: "#8B95A5", // drugorzędny tekst — szary
-	inputBg: "#243352", // tło inputów w formularzu
-	inputBorder: "#2E4066", // obramowanie inputów
-	border: "#2E3A50", // subtelne linie oddzielające
-} as const;
-```
-
-Importuj ten plik w każdym komponencie zamiast wpisywać kolory ręcznie.
+Zaimplementuj pełną nawigację w aplikacji TravelSnap: dolne zakładki (Tab Navigation), ekran szczegółów podróży (Stack Navigation) oraz nawigację między listą a ekranem szczegółów. Pracujesz według design spec-a - nie przepisuj kodu z tablicy, zaprojektuj rozwiązanie samodzielnie.
 
 ---
 
-## Krok 1: `ScreenHeader`
+## Design spec
 
-Stwórz nowy komponent `components/ScreenHeader.tsx`.
+### Architektura nawigacji
 
-**Co ma wyświetlać:**
-
-- Po lewej: **„TravelSnap"** (duży, bold, biały) + pod spodem **„Twój dziennik podróży"** (mały, `textSecondary`)
-- Po prawej: kółko z liczbą podróży (np. „3") - tło `accent`, biały tekst, okrągłe
-
-**Wymagania techniczne:**
-
-- Tło: `Colors.background`
-- Layout: `flexDirection: 'row'`, `justifyContent: 'space-between'`, `alignItems: 'center'`
-- Padding: 20 góra, 16 boki, 12 dół
-- Kółko z liczbą: `width: 36`, `height: 36`, `borderRadius: 18`
-
-**Props:**
-
-```ts
-interface ScreenHeaderProps {
-	tripCount: number;
-}
+```
+app/
+  _layout.tsx          ← Root Stack (dark theme header)
+  (tabs)/
+    _layout.tsx        ← Tab Navigator (3 zakładki)
+    index.tsx          ← Home — lista podróży
+    explore.tsx        ← Explore — nowy ekran
+    profile.tsx        ← Profile — nowy ekran
+  trip/
+    [id].tsx           ← TripDetail — ekran szczegółów
 ```
 
-**Podpowiedź struktury:**
+### Tab Bar — wytyczne wizualne
+
+- Tło: `Colors.dark.background` (ciemne)
+- Aktywna ikona: `Colors.dark.tint` (React Blue `#61DAFB`)
+- Nieaktywna ikona: `#8B95A5`
+- Ikony: Ionicons - `home`, `compass-outline`, `person`
+- Bez domyślnego headera (`headerShown: false`)
+- Bez górnej ramki (`borderTopWidth: 0`)
+
+### Ekran Explore
+
+- Ciemne tło, tekst wycentrowany
+- Tytuł: "Discover new places" (styl `ScreenHeader`)
+- Podtytuł: "Coming soon..." w szarym kolorze
+- Ikona kompasu (Ionicons `compass`, rozmiar 64, kolor React Blue)
+
+### Ekran Profile
+
+- Ciemne tło
+- Awatar: kolorowe kółko z inicjałami (View + Text, bez obrazka)
+- Nazwa: Twoje imię, styl bold 22px
+- Pod spodem: "Joined March 2026" w szarym
+- Sekcja "Stats": 3 karty w rzędzie (Trips: liczba z listy, Countries: hardcoded, Rating: avg z listy)
+
+### Ekran TripDetail (`app/trip/[id].tsx`)
+
+- Header Stack: tytuł = nazwa podróży (dynamicznie z params)
+- `headerStyle.backgroundColor`: `Colors.dark.background`
+- `headerTintColor`: `Colors.dark.tint`
+- Layout ekranu:
+  - Górna sekcja: duży tytuł (24px bold), destynacja z ikoną `location` (16px szary)
+  - Data podróży z ikoną `calendar` (14px szary)
+  - Komponent `RatingStars` z oceną
+  - Przycisk "Powrót do listy" - `Pressable` z `router.back()`
+  - Styl przycisku: tło React Blue, borderRadius 8, padding 12
+
+### Nawigacja Home → TripDetail
+
+- `TripCard` opakowany w `<Link>` z `expo-router`
+- `href` przekazuje: `pathname: '/trip/[id]'`, `params: { id, title, destination, date, rating }`
+- Link nie dodaje własnych styli (użyj `asChild` jeśli potrzebne)
+
+---
+
+## Kroki
+
+### Krok 0 - Przygotowanie brancha
+
+```bash
+git checkout lesson-5
+```
+
+### Krok 1 - Root Stack Layout
+
+Utwórz / zmodyfikuj `app/_layout.tsx`:
+
+- Importuj `Stack` z `expo-router`
+- Ustaw `screenOptions` z ciemnym tłem headera i jasnym kolorem tekstu
+- Zdefiniuj `Stack.Screen` dla `(tabs)` z `headerShown: false`
+- Zdefiniuj `Stack.Screen` dla `trip/[id]` z tytułem "Trip Details"
+
+### Krok 2 - Tab Navigator
+
+Zmodyfikuj `app/(tabs)/_layout.tsx`:
+
+- Importuj `Tabs` z `expo-router` i `Ionicons`
+- W `screenOptions` ustaw kolory tab bara i ukryj header
+- Zdefiniuj 3 zakładki: `index` (Home), `explore` (Explore), `profile` (Profile)
+- Każda zakładka ma swoją ikonę Ionicons i tytuł
+- `tabBarStyle` z ciemnym tłem i `borderTopWidth: 0`
+
+### Krok 3 - Ekran Explore
+
+Utwórz `app/(tabs)/explore.tsx`:
+
+- Komponent z ciemnym tłem (flex: 1)
+- Ikona kompasu wycentrowana
+- Tytuł i podtytuł wg design spec-a
+
+### Krok 4 - Ekran Profile
+
+Utwórz `app/(tabs)/profile.tsx`:
+
+- Awatar z inicjałami (View z borderRadius: 9999)
+- Imię, data dołączenia
+- Sekcja stats: 3 karty w `flexDirection: 'row'`
+- Każda karta: wartość (bold, duża) + etykieta (szara, mała)
+
+### Krok 5 - Ekran TripDetail
+
+Utwórz `app/trip/[id].tsx`:
+
+- `useLocalSearchParams` - odczytaj `id`, `title`, `destination`, `date`, `rating`
+- `Stack.Screen options` - ustaw tytuł dynamicznie z `title`
+- Wyświetl: tytuł, destynacja z ikoną, data z ikoną, RatingStars
+- Przycisk "Powrót do listy" z `useRouter().back()`
+- Styl wg design spec-a
+
+### Krok 6 - Podłącz nawigację z Home
+
+W `app/(tabs)/index.tsx`:
+
+- Importuj `Link` z `expo-router`
+- Opakuj każdy `TripCard` w `<Link>`
+- Przekaż `href={{ pathname: '/trip/[id]', params: { ... } }}`
+- Sprawdź, czy kliknięcie karty otwiera TripDetail
+
+### Krok 7 - Testowanie
+
+- Tab bar wyświetla 3 zakładki z ikonami
+- Kliknięcie zakładki przełącza ekran bez utraty stanu
+- Kliknięcie TripCard otwiera ekran TripDetail z animacją slide-in
+- Dane podróży wyświetlają się poprawnie na TripDetail
+- Przycisk "Powrót" i gest swipe-back działają
+- Header TripDetail ma ciemne tło i tytuł podróży
+
+### Krok 8 - Modal "Add Trip"
+
+Dodaj ekran `app/add-trip.tsx`:
+
+- W Root `_layout.tsx` dodaj `Stack.Screen` z `presentation: 'modal'`
+- Przenieś `AddTripForm` na ten ekran
+- Na Home dodaj `Pressable` / FAB (Floating Action Button) który otwiera modal: `router.push('/add-trip')`
+- Po dodaniu podróży — `router.back()` zamyka modal
+
+### Krok 9 - Animacje przejść
+
+W `Stack.Screen` dla `trip/[id]` dodaj:
 
 ```tsx
-<View style={styles.header}>
-	<View>
-		{" "}
-		{/* lewa strona: column */}
-		<Text style={styles.appName}>TravelSnap</Text>
-		<Text style={styles.subtitle}>Twój dziennik podróży</Text>
-	</View>
-	<View style={styles.badge}>
-		{" "}
-		{/* prawa strona: kółko */}
-		<Text style={styles.badgeText}>{tripCount}</Text>
-	</View>
-</View>
+options={{
+  animation: 'slide_from_bottom',
+  // lub: 'fade', 'slide_from_right', 'flip'
+}}
 ```
 
----
+Przetestuj różne animacje i wybierz najlepszą dla TravelSnap.
 
-## Krok 2: TripCard — dark restyle
+### Krok 10 - Ulubione
 
-Przeróbcie istniejący `TripCard` - **nie piszecie od zera**, modyfikujecie to co macie.
+Na ekranie TripDetail:
 
-**Design spec:**
-
-| Element                    | Wartość                                                             |
-| -------------------------- | ------------------------------------------------------------------- |
-| Tło karty                  | `Colors.card` (`#1A2742`)                                           |
-| `borderRadius`             | `16` (zmniejszcie z 32)                                             |
-| `padding`                  | `16`                                                                |
-| `marginBottom`             | `12`                                                                |
-| Cień (iOS)                 | `shadowColor: '#000'`, `shadowOpacity: 0.2`, `shadowRadius: 8`      |
-| Cień (Android)             | `elevation: 4`                                                      |
-| Tytuł                      | biały (`Colors.textPrimary`), `fontSize: 18`, `fontWeight: 'bold'`  |
-| Meta (destination \| date) | `Colors.textSecondary`, `fontSize: 13`, `marginTop: 4`              |
-| Przycisk usuwania          | tło `accent` z opacity 0.15, `borderRadius: 12`, `padding: 6`       |
-| Gwiazdki                   | Ionicons `star` / `star-outline`, kolor `Colors.accent`, `size: 16` |
-
-**Gwiazdki:** zamieńcie emoji (`★`/`☆`) na Ionicons (`import { Ionicons } from '@expo/vector-icons'` - wbudowane w Expo, zero instalacji).
+- Dodaj ikonę serduszka w prawym górnym rogu headera (`headerRight`)
+- Kliknięcie toggleuje stan `isFavorite` (useState)
+- Ikona: `heart` (wypełniony, czerwony) / `heart-outline` (pusty, szary)
+- Zapisz ulubione w stanie — bonus: użyj `AsyncStorage`
 
 ---
-
-## Krok 3: `EmptyState`
-
-Nowy komponent `components/EmptyState.tsx`.
-
-**Kiedy:** wyświetlany w `index.tsx` gdy `trips.length === 0` (zamiast pustej listy).
-
-**Co wyświetla:**
-
-- Duża ikona: Ionicons `airplane-outline`, `size: 64`, kolor `Colors.primary`
-- Tekst główny: **„Brak podróży"** — biały, `fontSize: 20`, bold
-- Tekst pomocniczy: **„Dodaj swoją pierwszą podróż!"** — `Colors.textSecondary`, `fontSize: 14`
-
-**Layout:**
-
-- `justifyContent: 'center'`, `alignItems: 'center'`
-- `gap: 12` między elementami
-
-**Uwaga:** `EmptyState` z `flex: 1` nie zadziała dobrze w `ScrollView`. Użyj jawnej wysokości, np. `height: 300`.
-
-**Props:** brak - to czysty komponent prezentacyjny.
-
----
-
-## Krok 4: Złóż to w całość (`index.tsx`)
-
-1. Zmień `backgroundColor` kontenera na `Colors.background`
-2. Dodaj `<ScreenHeader tripCount={trips.length} />` na górze
-3. Usuń stary `<Text>Total trips: ...</Text>`
-4. Gdy `trips.length === 0` — pokaż `<EmptyState />`
-5. Gdy `trips.length > 0` — pokaż listę kart jak dotychczas
-
-**Oczekiwana struktura:**
-
-```tsx
-<ScrollView
-	style={{ flex: 1, backgroundColor: Colors.background }}
-	contentContainerStyle={{ padding: 16 }}
->
-	<ScreenHeader tripCount={trips.length} />
-	<AddTripForm onAdd={handleAddTrip} />
-	{trips.length === 0 ? (
-		<EmptyState />
-	) : (
-		trips.map((trip) => (
-			<TripCard
-				key={trip.id}
-				{...trip}
-				onDelete={() => handleDeleteTrip(trip.id)}
-			/>
-		))
-	)}
-</ScrollView>
-```
-
----
-
-## Krok 5: AddTripForm restyle
-
-Dostosujcie formularz do ciemnego theme:
-
-- Tło formularza: `Colors.card`
-- Inputy: tło `Colors.inputBg`, border `Colors.inputBorder`, tekst biały, placeholder `Colors.textSecondary`
-- Tytuł formularza: biały
-- Przycisk: tło `Colors.accent`, biały tekst, `borderRadius: 12`
-
-## Krok 6: TripStats
-
-Nowy komponent pod headerem — pasek z 3 kafelkami w rzędzie:
-
-- **„Podróże"** — `trips.length`
-- **„Śr. ocena"** — średnia rating (`.toFixed(1)`)
-- **„Kraje"** — unikalne destinations (`new Set(...).size`)
-
-Layout: `flexDirection: 'row'`, każdy kafelek `flex: 1`, tło `Colors.card`, `padding: 12`, `gap: 8`.
-Każdy kafelek: liczba (duża, bold, `Colors.primary`) + label pod spodem (mały, `Colors.textSecondary`).
-
-## Krok 7: StatusBar + SafeArea
-
-Dodajcie `StatusBar` z `barStyle="light-content"` i opakujcie ekran w `SafeAreaView`, żeby content nie wchodził pod notch.
