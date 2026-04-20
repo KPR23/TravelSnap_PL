@@ -82,9 +82,11 @@ const styles = StyleSheet.create({
 		paddingHorizontal: Spacing.lg,
 	},
 	content: {
+		flexGrow: 1,
 		paddingBottom: Spacing.xl,
 	},
 	topSection: {
+		flex: 1,
 		gap: Spacing.sm,
 	},
 	title: {
@@ -102,7 +104,7 @@ const styles = StyleSheet.create({
 		color: Colors.textSecondary,
 	},
 	backButton: {
-		marginTop: Spacing.md,
+		marginTop: "auto",
 		backgroundColor: Colors.primary,
 		borderRadius: 8,
 		padding: 12,
