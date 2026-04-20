@@ -3,7 +3,8 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TripDetailScreen() {
@@ -15,6 +16,7 @@ export default function TripDetailScreen() {
 		rating: string;
 	}>();
 	const parsedRating = Number(rating) || 0;
+	const [isFavorite, setIsFavorite] = useState(false);
 
 	return (
 		<>
@@ -23,8 +25,18 @@ export default function TripDetailScreen() {
 					title: title || "Trip Detail",
 					headerStyle: { backgroundColor: Colors.background },
 					headerTintColor: Colors.primary,
-					headerBackButtonDisplayMode: "minimal",
-					headerBackTitle: "",
+					headerRight: () => (
+						<Pressable
+							style={styles.favoriteButton}
+							onPress={() => setIsFavorite(!isFavorite)}
+						>
+							<Ionicons
+								name={isFavorite ? "heart" : "heart-outline"}
+								size={24}
+								color={isFavorite ? Colors.accent : Colors.textSecondary}
+							/>
+						</Pressable>
+					),
 				}}
 			/>
 			<SafeAreaView
@@ -83,5 +95,11 @@ const styles = StyleSheet.create({
 	meta: {
 		fontSize: 14,
 		color: Colors.textSecondary,
+	},
+	favoriteButton: {
+		padding: Spacing.sm,
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
 	},
 });
