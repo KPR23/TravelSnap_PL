@@ -1,7 +1,6 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 export default function RootLayout() {
@@ -42,7 +41,6 @@ export default function RootLayout() {
 					),
 				}}
 			/>
-			<StatusBar style="light" />
 		</Tabs>
 	);
 }

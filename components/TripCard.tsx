@@ -1,11 +1,20 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+	Pressable,
+	type PressableProps,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Trip } from "@/types/trip";
 import RatingStars from "./RatingStars";
 
-type TripCardProps = Trip & { onDelete: () => void };
+type TripCardProps = Trip &
+	PressableProps & {
+		onDelete: () => void;
+	};
 
 export default function TripCard({
 	onDelete,
@@ -13,18 +22,21 @@ export default function TripCard({
 	destination,
 	date,
 	rating,
+	...pressableProps
 }: TripCardProps) {
 	return (
-		<View style={styles.card}>
-			<Text style={styles.title}>{title}</Text>
-			<Text style={styles.meta}>
-				{destination} | {date}
-			</Text>
-			<RatingStars rating={rating} />
-			<Pressable onPress={onDelete} style={styles.deleteButton}>
-				<Text style={styles.deleteButtonText}>Usuń</Text>
-			</Pressable>
-		</View>
+		<Pressable {...pressableProps}>
+			<View style={styles.card}>
+				<Text style={styles.title}>{title}</Text>
+				<Text style={styles.meta}>
+					{destination} | {date}
+				</Text>
+				<RatingStars rating={rating} />
+				<Pressable onPress={onDelete} style={styles.deleteButton}>
+					<Text style={styles.deleteButtonText}>Usuń</Text>
+				</Pressable>
+			</View>
+		</Pressable>
 	);
 }
 

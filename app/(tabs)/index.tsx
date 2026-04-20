@@ -6,6 +6,7 @@ import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import type { Trip, TripData } from "@/types/trip";
+import { Link } from "expo-router";
 import { useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -50,11 +51,22 @@ export default function HomeScreen() {
 					<EmptyState />
 				) : (
 					trips.map((trip) => (
-						<TripCard
+						<Link
 							key={trip.id}
-							{...trip}
-							onDelete={() => handleDeleteTrip(trip.id)}
-						/>
+							href={{
+								pathname: "/trip/[id]",
+								params: {
+									id: trip.id,
+									title: trip.title,
+									destination: trip.destination,
+									date: trip.date,
+									rating: trip.rating.toString(),
+								},
+							}}
+							asChild
+						>
+							<TripCard {...trip} onDelete={() => handleDeleteTrip(trip.id)} />
+						</Link>
 					))
 				)}
 			</ScrollView>
