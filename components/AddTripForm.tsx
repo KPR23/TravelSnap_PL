@@ -1,7 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { MONTH_LENGTH, YEAR_LENGTH } from "@/constants/Constants";
 import { Spacing } from "@/constants/Spacing";
-import { pickImage } from "@/lib/pickImage";
+import { handleAddPhoto } from "@/lib/pickImage";
 import type { TripData } from "@/types/trip";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
@@ -26,6 +26,7 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 	const [dateDigits, setDateDigits] = useState("");
 	const [rating, setRating] = useState("");
 	const [imageUri, setImageUri] = useState<string>();
+	const [draftTripId] = useState(() => Date.now().toString());
 
 	const date =
 		dateDigits.length <= YEAR_LENGTH
@@ -125,18 +126,29 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 				/>
 			</View>
 			<View style={styles.imageContainer}>
-				{imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
-				<Pressable
-					onPress={() => pickImage(setImageUri)}
-					style={styles.imageButton}
-				>
-					<Ionicons
-						name="camera-outline"
-						size={24}
-						color={Colors.textPrimary}
-					/>
-					<Text style={styles.imageText}>Dodaj zdjęcie</Text>
-				</Pressable>
+				{imageUri ? (
+					<>
+						<Image source={{ uri: imageUri }} style={styles.image} />
+						<Pressable
+							onPress={() => handleAddPhoto(draftTripId, setImageUri)}
+							style={styles.changeImageButton}
+						>
+							<Text style={styles.imageText}>Zmień zdjęcie</Text>
+						</Pressable>
+					</>
+				) : (
+					<Pressable
+						onPress={() => handleAddPhoto(draftTripId, setImageUri)}
+						style={styles.imageButton}
+					>
+						<Ionicons
+							name="camera-outline"
+							size={24}
+							color={Colors.textPrimary}
+						/>
+						<Text style={styles.imageText}>Dodaj zdjęcie</Text>
+					</Pressable>
+				)}
 			</View>
 			<Pressable onPress={handleAddTrip} style={styles.button}>
 				<Text style={styles.buttonText}>Dodaj</Text>
@@ -197,5 +209,9 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		gap: Spacing.xs,
 		padding: Spacing.md,
+	},
+	changeImageButton: {
+		paddingVertical: Spacing.sm,
+		paddingHorizontal: Spacing.md,
 	},
 });
