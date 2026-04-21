@@ -1,22 +1,18 @@
 import AddTripForm from "@/components/AddTripForm";
 import { Colors } from "@/constants/Colors";
+import { useTrips } from "@/context/TripsContext";
 import type { TripData } from "@/types/trip";
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AddTripScreen() {
+	const { addTrip } = useTrips();
+
 	const handleAddTrip = (data: TripData) => {
-		const id = Date.now().toString();
+		addTrip(data);
 		router.replace({
 			pathname: "/(tabs)",
-			params: {
-				newTripId: id,
-				newTripTitle: data.title,
-				newTripDestination: data.destination,
-				newTripDate: data.date,
-				newTripRating: data.rating.toString(),
-			},
 		});
 	};
 

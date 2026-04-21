@@ -1,29 +1,44 @@
 import RatingStars from "@/components/RatingStars";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
+import { useTrips } from "@/context/TripsContext";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+	Image,
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TripDetailScreen() {
-	const { id, title, destination, date, rating } = useLocalSearchParams<{
-		id: string;
-		title: string;
-		destination: string;
-		date: string;
-		rating: string;
-	}>();
+	const { id } = useLocalSearchParams<{ id: string }>();
+	const { getTripById } = useTrips();
 	const router = useRouter();
-	const parsedRating = Number(rating) || 0;
+	const trip = getTripById(id);
+	const parsedRating = trip?.rating ?? 0;
 	const [isFavorite, setIsFavorite] = useState(false);
+
+	if (!trip) {
+		return (
+			<SafeAreaView style={styles.container}>
+				<View style={styles.placeholder}>
+					<Ionicons name="alert-circle-outline" size={56} color={Colors.placeholder} />
+					<Text style={styles.placeholderText}>Nie znaleziono podróży</Text>
+				</View>
+			</SafeAreaView>
+		);
+	}
 
 	return (
 		<>
 			<Stack.Screen
 				options={{
-					title: title || "Trip Detail",
+					title: trip.title || "Trip Detail",
 					headerStyle: { backgroundColor: Colors.background },
 					headerTintColor: Colors.primary,
 					headerBackVisible: false,
@@ -47,14 +62,46 @@ export default function TripDetailScreen() {
 			>
 				<ScrollView contentContainerStyle={styles.content}>
 					<View style={styles.topSection}>
-						<Text style={styles.title}>{title}</Text>
+						{trip.imageUri ? (
+							<Image source={{ uri: trip.imageUri }} style={styles.image} />
+						) : (
+							<View style={styles.placeholder}>
+								<Ionicons
+									name="image-outline"
+									size={64}
+									color={Colors.placeholder}
+								/>
+								<Text style={styles.placeholderText}>Brak zdjęcia</Text>
+							</View>
+						)}
+						<Link
+							href={{
+								pathname: "/trip/gallery/[id]",
+								params: {
+									id: id as string,
+								},
+							}}
+							asChild
+						>
+							<Pressable style={styles.galleryButton}>
+								<Ionicons
+									name="images-outline"
+									size={24}
+									color={Colors.primary}
+								/>
+								<Text style={styles.galleryButtonText}>
+									Galeria {trip.galleryUris?.length ?? 0}
+								</Text>
+							</Pressable>
+						</Link>
+						<Text style={styles.title}>{trip.title}</Text>
 						<View style={styles.row}>
 							<Ionicons
 								name="location-outline"
 								size={16}
 								color={Colors.textSecondary}
 							/>
-							<Text style={styles.meta}>{destination}</Text>
+							<Text style={styles.meta}>{trip.destination}</Text>
 						</View>
 						<View style={styles.row}>
 							<Ionicons
@@ -62,7 +109,7 @@ export default function TripDetailScreen() {
 								size={14}
 								color={Colors.textSecondary}
 							/>
-							<Text style={styles.meta}>{date}</Text>
+							<Text style={styles.meta}>{trip.date}</Text>
 						</View>
 						<RatingStars rating={parsedRating} />
 						<Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -93,6 +140,34 @@ const styles = StyleSheet.create({
 		fontSize: 24,
 		fontWeight: "bold",
 		color: Colors.textPrimary,
+	},
+	image: {
+		width: "100%",
+		height: 250,
+		borderRadius: Spacing.sm,
+	},
+	placeholder: {
+		width: "100%",
+		height: 250,
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: Spacing.sm,
+		borderRadius: Spacing.sm,
+		backgroundColor: Colors.card,
+	},
+	placeholderText: {
+		fontSize: 16,
+		color: Colors.placeholder,
+	},
+	galleryButton: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: Spacing.xs,
+	},
+	galleryButtonText: {
+		color: Colors.primary,
+		fontSize: 16,
 	},
 	row: {
 		flexDirection: "row",

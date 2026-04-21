@@ -1,4 +1,5 @@
 import {
+	Image,
 	Pressable,
 	type PressableProps,
 	StyleSheet,
@@ -22,11 +23,13 @@ export default function TripCard({
 	destination,
 	date,
 	rating,
+	imageUri,
 	...pressableProps
 }: TripCardProps) {
 	return (
 		<Pressable {...pressableProps}>
 			<View style={styles.card}>
+				{imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
 				<Text style={styles.title}>{title}</Text>
 				<Text style={styles.meta}>
 					{destination} | {date}
@@ -50,6 +53,13 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.2,
 		shadowRadius: 8,
 		elevation: 4,
+	},
+	image: {
+		width: "100%",
+		height: 180,
+		marginBottom: Spacing.sm,
+		borderTopLeftRadius: Spacing.sm,
+		borderTopRightRadius: Spacing.sm,
 	},
 	title: {
 		fontSize: 18,
