@@ -1,123 +1,158 @@
-import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Colors } from "@/constants/Colors";
+import { MONTH_LENGTH, YEAR_LENGTH } from "@/constants/Constants";
+import { Spacing } from "@/constants/Spacing";
+import type { TripData } from "@/types/trip";
+import { useState } from "react";
+import {
+	Alert,
+	Keyboard,
+	Pressable,
+	StyleSheet,
+	Text,
+	TextInput,
+	View,
+} from "react-native";
 
-import type { TripData } from '@/types/trip';
-
-interface AddTripFormProps {
-  onAdd: (trip: TripData) => void;
-}
-
-const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
-const validate = (title: string, destination: string, date: string, rating: string): string | null => {
-  if (!title.trim() || !destination.trim() || !date.trim() || !rating.trim())
-    return 'All fields are required!';
-  if (!DATE_REGEX.test(date))
-    return 'Date must be in YYYY-MM-DD format!';
-  const ratingNum = Number(rating);
-  if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5)
-    return 'Rating must be a number between 1 and 5!';
-  return null;
+type AddTripFormProps = {
+	onAddTrip: (data: TripData) => void;
 };
 
-export default function AddTripForm({ onAdd }: AddTripFormProps) {
-  const [title, setTitle] = useState('');
-  const [destination, setDestination] = useState('');
-  const [date, setDate] = useState('');
-  const [rating, setRating] = useState('');
+export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
+	const [title, setTitle] = useState("");
+	const [destination, setDestination] = useState("");
+	const [dateDigits, setDateDigits] = useState("");
+	const [rating, setRating] = useState("");
 
-  const handleSubmit = (): void => {
-    const error = validate(title, destination, date, rating);
-    if (error) {
-      Alert.alert('Error', error);
-      return;
-    }
+	const date =
+		dateDigits.length <= YEAR_LENGTH
+			? dateDigits
+			: `${dateDigits.slice(0, YEAR_LENGTH)}-${dateDigits.slice(YEAR_LENGTH, YEAR_LENGTH + MONTH_LENGTH)}`;
 
-    onAdd({
-      title: title.trim(),
-      destination: destination.trim(),
-      date: date.trim(),
-      rating: Number(rating),
-    });
+	const handleDateChange = (text: string): void => {
+		setDateDigits(text.replace(/\D/g, "").slice(0, YEAR_LENGTH + MONTH_LENGTH));
+	};
 
-    setTitle('');
-    setDestination('');
-    setDate('');
-    setRating('');
-  };
+	const validateRating = (rating: string): boolean => {
+		const number = Number(rating);
+		return number >= 1 && number <= 5;
+	};
 
-  return (
-    <View style={styles.form}>
-      <Text style={styles.formTitle}>Add new trip</Text>
+	const validateDate = (date: string): boolean => {
+		const monthStr = date.slice(
+			YEAR_LENGTH + 1,
+			YEAR_LENGTH + 1 + MONTH_LENGTH,
+		);
+		const month = Number(monthStr);
+		return (
+			date.length === YEAR_LENGTH + 1 + MONTH_LENGTH &&
+			date[YEAR_LENGTH] === "-" &&
+			month >= 1 &&
+			month <= 12 &&
+			Number(date.slice(0, YEAR_LENGTH)) <= new Date().getFullYear()
+		);
+	};
 
-      <TextInput
-        style={styles.input}
-        placeholder="Title"
-        value={title}
-        onChangeText={setTitle}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Destination"
-        value={destination}
-        onChangeText={setDestination}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Date (YYYY-MM-DD)"
-        value={date}
-        onChangeText={setDate}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Rating (1-5)"
-        value={rating}
-        onChangeText={setRating}
-        keyboardType="numeric"
-      />
+	const handleAddTrip = (): void => {
+		Keyboard.dismiss();
 
-      <Pressable style={styles.addButton} onPress={handleSubmit}>
-        <Text style={styles.addButtonText}>Add Trip</Text>
-      </Pressable>
-    </View>
-  );
+		if (!title || !destination || !dateDigits || !rating) {
+			Alert.alert("Wypełnij wszystkie pola");
+			return;
+		}
+
+		const isRatingValid = validateRating(rating);
+		if (!isRatingValid) {
+			Alert.alert("Zła ocena", "Ocena musi być między 1 a 5");
+			return;
+		}
+
+		const isDateValid = validateDate(date);
+		if (!isDateValid) {
+			Alert.alert("Zła data", "Format: YYYY-MM (np. 2026-03)");
+			return;
+		}
+
+		onAddTrip({
+			title,
+			destination,
+			date,
+			rating: Number(rating),
+		});
+		setTitle("");
+		setDestination("");
+		setDateDigits("");
+		setRating("");
+	};
+
+	return (
+		<View style={styles.container}>
+			<View style={styles.formFields}>
+				<TextInput
+					placeholder="Tytuł"
+					placeholderTextColor={Colors.textSecondary}
+					style={styles.input}
+					value={title}
+					onChangeText={setTitle}
+				/>
+				<TextInput
+					placeholder="Destynacja"
+					placeholderTextColor={Colors.textSecondary}
+					style={styles.input}
+					value={destination}
+					onChangeText={setDestination}
+				/>
+				<TextInput
+					style={styles.input}
+					value={date}
+					onChangeText={handleDateChange}
+					keyboardType="numeric"
+					placeholder="YYYY-MM"
+					placeholderTextColor={Colors.textSecondary}
+					maxLength={7}
+				/>
+				<TextInput
+					placeholder="Ocena (1-5)"
+					placeholderTextColor={Colors.textSecondary}
+					style={styles.input}
+					onChangeText={(text) => setRating(text)}
+					value={rating}
+					keyboardType="numeric"
+				/>
+			</View>
+			<Pressable onPress={handleAddTrip} style={styles.button}>
+				<Text style={styles.buttonText}>Dodaj</Text>
+			</Pressable>
+		</View>
+	);
 }
 
 const styles = StyleSheet.create({
-  form: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 24,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#1a1a2e',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
-  },
-  addButton: {
-    backgroundColor: '#e94560',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
+	container: {
+		flex: 1,
+		gap: Spacing.sm,
+		borderRadius: Spacing.lg,
+	},
+	formFields: {
+		gap: Spacing.sm,
+	},
+	input: {
+		borderWidth: 1,
+		borderRadius: Spacing.sm,
+		padding: Spacing.sm,
+		backgroundColor: Colors.inputBg,
+		borderColor: Colors.inputBorder,
+		color: Colors.textPrimary,
+	},
+	button: {
+		backgroundColor: Colors.accent,
+		paddingVertical: Spacing.sm + Spacing.xs,
+		alignItems: "center",
+		justifyContent: "center",
+		borderRadius: Spacing.md,
+		marginTop: "auto",
+	},
+	buttonText: {
+		color: Colors.textPrimary,
+		fontSize: 16,
+	},
 });

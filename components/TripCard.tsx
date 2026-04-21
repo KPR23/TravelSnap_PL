@@ -1,66 +1,77 @@
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import {
+	Pressable,
+	type PressableProps,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 
-import RatingStars from './RatingStars';
+import { Colors } from "@/constants/Colors";
+import { Spacing } from "@/constants/Spacing";
+import { Trip } from "@/types/trip";
+import RatingStars from "./RatingStars";
 
-import type { TripData } from '@/types/trip';
+type TripCardProps = Trip &
+	PressableProps & {
+		onDelete: () => void;
+	};
 
-export interface TripCardProps extends TripData {
-  onDelete?: () => void;
-}
-
-export default function TripCard({ title, destination, date, rating, onDelete }: TripCardProps) {
-  return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
-        {onDelete && (
-          <Pressable onPress={onDelete} style={styles.deleteButton}>
-            <Text style={styles.deleteText}>X</Text>
-          </Pressable>
-        )}
-      </View>
-      <Text style={styles.meta}>
-        {destination} | {date}
-      </Text>
-      <RatingStars rating={rating} />
-    </View>
-  );
+export default function TripCard({
+	onDelete,
+	title,
+	destination,
+	date,
+	rating,
+	...pressableProps
+}: TripCardProps) {
+	return (
+		<Pressable {...pressableProps}>
+			<View style={styles.card}>
+				<Text style={styles.title}>{title}</Text>
+				<Text style={styles.meta}>
+					{destination} | {date}
+				</Text>
+				<RatingStars rating={rating} />
+				<Pressable onPress={onDelete} style={styles.deleteButton}>
+					<Text style={styles.deleteButtonText}>Usuń</Text>
+				</Pressable>
+			</View>
+		</Pressable>
+	);
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 32,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1a1a2e',
-    flex: 1,
-  },
-  deleteButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  deleteText: {
-    color: '#ff4444',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  meta: {
-    fontSize: 14,
-    color: '#888',
-    marginTop: 4,
-  },
+	card: {
+		backgroundColor: Colors.card,
+		padding: Spacing.lg,
+		borderRadius: Spacing.lg,
+		marginBottom: Spacing.md,
+		shadowColor: "#000",
+		shadowOpacity: 0.2,
+		shadowRadius: 8,
+		elevation: 4,
+	},
+	title: {
+		fontSize: 18,
+		fontWeight: "bold",
+		color: Colors.textPrimary,
+	},
+	meta: {
+		fontSize: 13,
+		color: Colors.textSecondary,
+		marginTop: Spacing.xs,
+	},
+	deleteButton: {
+		alignSelf: "flex-start",
+		marginTop: Spacing.md,
+		backgroundColor: `${Colors.accent}26`,
+		borderRadius: Spacing.md,
+		paddingHorizontal: Spacing.sm,
+		paddingVertical: Spacing.xs + 2,
+	},
+	deleteButtonText: {
+		color: Colors.accent,
+		fontSize: 15,
+		fontWeight: "600",
+	},
 });
