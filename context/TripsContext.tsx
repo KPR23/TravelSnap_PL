@@ -5,6 +5,7 @@ type TripsContextValue = {
 	trips: Trip[];
 	addTrip: (data: TripData) => string;
 	deleteTrip: (id: string) => void;
+	addGalleryImage: (tripId: string, uri: string) => void;
 	getTripById: (id: string) => Trip | undefined;
 };
 
@@ -48,6 +49,15 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 			},
 			deleteTrip: (id) => {
 				setTrips((prev) => prev.filter((trip) => trip.id !== id));
+			},
+			addGalleryImage: (tripId, uri) => {
+				setTrips((prev) =>
+					prev.map((trip) =>
+						trip.id === tripId
+							? { ...trip, galleryUris: [...(trip.galleryUris ?? []), uri] }
+							: trip,
+					),
+				);
 			},
 			getTripById: (id) => trips.find((trip) => trip.id === id),
 		}),

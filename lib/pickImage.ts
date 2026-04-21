@@ -1,13 +1,22 @@
 import { saveImageToTrip } from "@/ utils/imageStorage";
 import * as ImagePicker from "expo-image-picker";
 import { Alert } from "react-native";
-import { requestCameraPermissions } from "./permissions";
+import {
+	requestCameraPermissions,
+	requestMediaLibraryPermissions,
+} from "./permissions";
 
 export const pickImage = async (
 	tripId: string,
 	setImageUri: (uri: string) => void,
 ) => {
 	try {
+		const status = await requestMediaLibraryPermissions();
+		if (status !== "granted") {
+			Alert.alert("Nie masz uprawnień do galerii");
+			return;
+		}
+
 		const result = await ImagePicker.launchImageLibraryAsync({
 			mediaTypes: ["images"],
 			allowsEditing: true,
