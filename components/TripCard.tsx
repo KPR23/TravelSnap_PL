@@ -10,6 +10,7 @@ import {
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Trip } from "@/types/trip";
+import { Ionicons } from "@expo/vector-icons";
 import RatingStars from "./RatingStars";
 
 type TripCardProps = Trip &
@@ -24,12 +25,23 @@ export default function TripCard({
 	date,
 	rating,
 	imageUri,
+	galleryUris,
 	...pressableProps
 }: TripCardProps) {
 	return (
 		<Pressable {...pressableProps}>
 			<View style={styles.card}>
 				{imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
+				{galleryUris && galleryUris.length > 0 && (
+					<View style={styles.galleryContainer}>
+						<Ionicons
+							name="images-outline"
+							size={14}
+							color={Colors.textPrimary}
+						/>
+						<Text style={styles.galleryCount}>{galleryUris.length}</Text>
+					</View>
+				)}
 				<Text style={styles.title}>{title}</Text>
 				<Text style={styles.meta}>
 					{destination} | {date}
@@ -53,6 +65,24 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.2,
 		shadowRadius: 8,
 		elevation: 4,
+	},
+	galleryContainer: {
+		position: "absolute",
+		top: 24,
+		right: 24,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: Spacing.xs,
+		marginBottom: Spacing.sm,
+		paddingHorizontal: Spacing.sm,
+		paddingVertical: Spacing.xs,
+		borderRadius: 999,
+		backgroundColor: `${Colors.accent}`,
+	},
+	galleryCount: {
+		fontSize: 12,
+		color: Colors.textPrimary,
 	},
 	image: {
 		width: "100%",
