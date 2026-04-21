@@ -1,7 +1,7 @@
-import { deleteImage } from "@/ utils/imageStorage";
 import { Colors } from "@/constants/Colors";
 import { useTrips } from "@/context/TripsContext";
 import { handleAddPhoto } from "@/lib/pickImage";
+import { deleteImage } from "@/utils/imageStorage";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -26,7 +26,9 @@ export default function GalleryScreen() {
 		useTrips();
 	const [selectedUri, setSelectedUri] = useState<string | null>(null);
 	const trip = getTripById(id);
-	const images = trip?.galleryUris ?? [];
+	const images = Array.from(
+		new Set([trip?.imageUri, ...(trip?.galleryUris ?? [])].filter(Boolean)),
+	) as string[];
 
 	const handleAddImage = () => {
 		handleAddPhoto(id, (uri) => addGalleryImage(id, uri));
@@ -34,6 +36,15 @@ export default function GalleryScreen() {
 
 	const handleDeleteImage = () => {
 		if (!selectedUri) {
+			return;
+		}
+		const isMainImage = trip?.imageUri === selectedUri;
+		const isOnlyImage = images.length === 1;
+		if (isMainImage && isOnlyImage) {
+			Alert.alert(
+				"To jedyne zdjęcie",
+				"Nie możesz usunąć głównego zdjęcia, ponieważ to jedyne zdjęcie w tej wycieczce.",
+			);
 			return;
 		}
 
@@ -58,9 +69,6 @@ export default function GalleryScreen() {
 	};
 
 	const handleSetAsMainImage = (uri: string) => {
-		if (!selectedUri) {
-			return;
-		}
 		setMainImage(id, uri);
 		setSelectedUri(null);
 		router.back();
@@ -71,7 +79,7 @@ export default function GalleryScreen() {
 			<SafeAreaView style={styles.container}>
 				<FlatList
 					data={images}
-					keyExtractor={(item, index) => `${item}-${index}`}
+					keyExtractor={(item) => item}
 					numColumns={3}
 					columnWrapperStyle={styles.row}
 					contentContainerStyle={styles.content}
@@ -112,7 +120,7 @@ export default function GalleryScreen() {
 					</Pressable>
 					<Pressable
 						style={styles.setAsMainButton}
-						onPress={() => handleSetAsMainImage(selectedUri ?? "")}
+						onPress={() => handleSetAsMainImage(selectedUri!)}
 					>
 						<Text style={styles.setAsMainButtonText}>Ustaw jako główne</Text>
 					</Pressable>

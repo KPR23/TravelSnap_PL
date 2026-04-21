@@ -16,7 +16,8 @@ export async function saveImageToTrip(
 	tripId: string,
 ): Promise<string> {
 	try {
-		if (!uri.startsWith("file://")) {
+		const isRemoteUri = /^https?:\/\//i.test(uri);
+		if (isRemoteUri) {
 			return uri;
 		}
 
@@ -26,19 +27,33 @@ export async function saveImageToTrip(
 		}
 
 		const tripFolder = await ensureTripFolder(tripId);
-		const fileName = uri.split("/").pop();
+		const originalFileName = uri.split("/").pop();
+		if (!originalFileName) {
+			throw new Error(`Could not extract file name from uri: ${uri}`);
+		}
+
+		const safeFileName = originalFileName.split("?")[0];
+		const extension = safeFileName.includes(".")
+			? safeFileName.split(".").pop()
+			: undefined;
+		const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+		const fileName = extension ? `${uniqueId}.${extension}` : `${uniqueId}.jpg`;
+
 		const newUri = tripFolder + fileName;
 		await FileSystem.copyAsync({ from: uri, to: newUri });
 		return newUri;
-	} catch {
-		return uri;
+	} catch (error) {
+		const details = error instanceof Error ? error.message : String(error);
+		throw new Error(
+			`Failed to copy image to trip folder (tripId: ${tripId}, uri: ${uri}): ${details}`,
+		);
 	}
 }
 
 export async function deleteImage(uri: string): Promise<void> {
 	try {
 		await FileSystem.deleteAsync(uri, { idempotent: true });
-	} catch {
-		throw new Error(`Failed to delete image: ${uri}`);
+	} catch (error) {
+		throw new Error(`Failed to delete image: ${uri}`, { cause: error });
 	}
 }

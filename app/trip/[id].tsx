@@ -21,6 +21,11 @@ export default function TripDetailScreen() {
 	const router = useRouter();
 	const trip = getTripById(id);
 	const parsedRating = trip?.rating ?? 0;
+	const galleryCount = trip
+		? Array.from(
+				new Set([trip.imageUri, ...(trip.galleryUris ?? [])].filter(Boolean)),
+			).length
+		: 0;
 	const [isFavorite, setIsFavorite] = useState(false);
 
 	if (!trip) {
@@ -90,7 +95,7 @@ export default function TripDetailScreen() {
 									color={Colors.primary}
 								/>
 								<Text style={styles.galleryButtonText}>
-									Galeria {trip.galleryUris?.length ?? 0}
+									Galeria {galleryCount}
 								</Text>
 							</Pressable>
 						</Link>

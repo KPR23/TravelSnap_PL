@@ -46,7 +46,13 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 			trips,
 			addTrip: (data) => {
 				const id = Date.now().toString();
-				setTrips((prev) => [...prev, { id, ...data }]);
+				const mergedGalleryUris = Array.from(
+					new Set([data.imageUri, ...(data.galleryUris ?? [])].filter(Boolean)),
+				) as string[];
+				setTrips((prev) => [
+					...prev,
+					{ id, ...data, galleryUris: mergedGalleryUris },
+				]);
 				return id;
 			},
 			deleteTrip: (id) => {
@@ -55,7 +61,15 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 			setMainImage: (tripId: string, uri: string) => {
 				setTrips((prev) =>
 					prev.map((trip) =>
-						trip.id === tripId ? { ...trip, imageUri: uri } : trip,
+						trip.id === tripId
+							? {
+									...trip,
+									imageUri: uri,
+									galleryUris: Array.from(
+										new Set([uri, ...(trip.galleryUris ?? [])]),
+									),
+								}
+							: trip,
 					),
 				);
 			},

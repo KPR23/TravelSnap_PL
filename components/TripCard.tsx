@@ -9,7 +9,7 @@ import {
 
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
-import { Trip } from "@/types/trip";
+import type { Trip } from "@/types/trip";
 import { Ionicons } from "@expo/vector-icons";
 import RatingStars from "./RatingStars";
 

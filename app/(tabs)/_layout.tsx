@@ -11,7 +11,7 @@ export default function RootLayout() {
 				tabBarActiveTintColor: Colors.primary,
 				tabBarInactiveTintColor: Colors.textSecondary,
 				tabBarStyle: { backgroundColor: Colors.background, borderTopWidth: 0 },
-				tabBarLabelStyle: { fontSize: 12, fontWeight: "medium" },
+				tabBarLabelStyle: { fontSize: 12, fontWeight: "500" },
 			}}
 		>
 			<Tabs.Screen

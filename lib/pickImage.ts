@@ -1,4 +1,4 @@
-import { saveImageToTrip } from "@/ utils/imageStorage";
+import { saveImageToTrip } from "@/utils/imageStorage";
 import * as ImagePicker from "expo-image-picker";
 import { Alert } from "react-native";
 import {
@@ -39,25 +39,27 @@ export const takePhoto = async (
 	setImageUri: (uri: string) => void,
 ) => {
 	const status = await requestCameraPermissions();
+
 	if (status !== "granted") {
 		Alert.alert("Nie masz uprawnień do użycia kamery");
 		return;
-	} else {
-		try {
-			const result = await ImagePicker.launchCameraAsync({
-				mediaTypes: ["images"],
-				allowsEditing: true,
-				aspect: [16, 9],
-				quality: 0.8,
-			});
-			if (!result.canceled) {
-				const pickedUri = result.assets[0].uri;
-				const uri = await saveImageToTrip(pickedUri, tripId);
-				setImageUri(uri);
-			}
-		} catch {
-			Alert.alert("Nie udało się zrobić zdjęcia");
+	}
+
+	try {
+		const result = await ImagePicker.launchCameraAsync({
+			mediaTypes: ["images"],
+			allowsEditing: true,
+			aspect: [16, 9],
+			quality: 0.8,
+		});
+
+		if (!result.canceled) {
+			const pickedUri = result.assets[0].uri;
+			const uri = await saveImageToTrip(pickedUri, tripId);
+			setImageUri(uri);
 		}
+	} catch {
+		Alert.alert("Nie udało się zrobić zdjęcia");
 	}
 };
 
