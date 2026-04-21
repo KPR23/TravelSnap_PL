@@ -7,6 +7,7 @@ type TripsContextValue = {
 	deleteTrip: (id: string) => void;
 	addGalleryImage: (tripId: string, uri: string) => void;
 	removeGalleryImage: (tripId: string, uri: string) => void;
+	setMainImage: (tripId: string, uri: string) => void;
 	getTripById: (id: string) => Trip | undefined;
 };
 
@@ -51,6 +52,13 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 			deleteTrip: (id) => {
 				setTrips((prev) => prev.filter((trip) => trip.id !== id));
 			},
+			setMainImage: (tripId: string, uri: string) => {
+				setTrips((prev) =>
+					prev.map((trip) =>
+						trip.id === tripId ? { ...trip, imageUri: uri } : trip,
+					),
+				);
+			},
 			addGalleryImage: (tripId, uri) => {
 				setTrips((prev) =>
 					prev.map((trip) =>
@@ -79,7 +87,9 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 		[trips],
 	);
 
-	return <TripsContext.Provider value={value}>{children}</TripsContext.Provider>;
+	return (
+		<TripsContext.Provider value={value}>{children}</TripsContext.Provider>
+	);
 }
 
 export function useTrips(): TripsContextValue {

@@ -1,9 +1,10 @@
+import { deleteImage } from "@/ utils/imageStorage";
 import { Colors } from "@/constants/Colors";
 import { useTrips } from "@/context/TripsContext";
-import { deleteImage } from "@/ utils/imageStorage";
 import { handleAddPhoto } from "@/lib/pickImage";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import {
 	Alert,
 	Dimensions,
@@ -16,13 +17,13 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState } from "react";
 
 const ITEM_SIZE = (Dimensions.get("window").width - 16) / 3;
 
 export default function GalleryScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
-	const { getTripById, addGalleryImage, removeGalleryImage } = useTrips();
+	const { getTripById, addGalleryImage, removeGalleryImage, setMainImage } =
+		useTrips();
 	const [selectedUri, setSelectedUri] = useState<string | null>(null);
 	const trip = getTripById(id);
 	const images = trip?.galleryUris ?? [];
@@ -54,6 +55,15 @@ export default function GalleryScreen() {
 				},
 			},
 		]);
+	};
+
+	const handleSetAsMainImage = (uri: string) => {
+		if (!selectedUri) {
+			return;
+		}
+		setMainImage(id, uri);
+		setSelectedUri(null);
+		router.back();
 	};
 
 	return (
@@ -94,8 +104,17 @@ export default function GalleryScreen() {
 							resizeMode="contain"
 						/>
 					) : null}
-					<Pressable style={styles.closeButton} onPress={() => setSelectedUri(null)}>
+					<Pressable
+						style={styles.closeButton}
+						onPress={() => setSelectedUri(null)}
+					>
 						<Ionicons name="close" size={28} color={Colors.textPrimary} />
+					</Pressable>
+					<Pressable
+						style={styles.setAsMainButton}
+						onPress={() => handleSetAsMainImage(selectedUri ?? "")}
+					>
+						<Text style={styles.setAsMainButtonText}>Ustaw jako główne</Text>
 					</Pressable>
 					<Pressable style={styles.deleteButton} onPress={handleDeleteImage}>
 						<Ionicons name="trash-outline" size={28} color={Colors.accent} />
@@ -141,6 +160,19 @@ const styles = StyleSheet.create({
 	emptyText: {
 		color: Colors.textSecondary,
 		fontSize: 16,
+	},
+	setAsMainButton: {
+		position: "absolute",
+		bottom: 36,
+		backgroundColor: Colors.primary,
+		borderRadius: 999,
+		paddingHorizontal: 16,
+		paddingVertical: 8,
+	},
+	setAsMainButtonText: {
+		color: Colors.background,
+		fontSize: 16,
+		fontWeight: "600",
 	},
 	fab: {
 		position: "absolute",
