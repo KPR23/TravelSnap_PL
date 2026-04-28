@@ -1,11 +1,12 @@
 import { Colors } from "@/constants/Colors";
+import { TripsProvider } from "@/context/TripsContext";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 export default function RootLayout() {
 	return (
-		<>
+		<TripsProvider>
 			<Stack
 				screenOptions={{
 					headerShown: false,
@@ -40,6 +41,6 @@ export default function RootLayout() {
 				/>
 			</Stack>
 			<StatusBar style="light" />
-		</>
+		</TripsProvider>
 	);
 }

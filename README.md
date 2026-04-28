@@ -1,172 +1,173 @@
-# Zadanie 5 - Nawigacja i routing w TravelSnap
+# Zajęcia 6 - Zadanie: Zdjęcia i galeria podróży
 
 ## Cel
 
-Zaimplementuj pełną nawigację w aplikacji TravelSnap: dolne zakładki (Tab Navigation), ekran szczegółów podróży (Stack Navigation) oraz nawigację między listą a ekranem szczegółów. Pracujesz według design spec-a - nie przepisuj kodu z tablicy, zaprojektuj rozwiązanie samodzielnie.
+Dodaj do TravelSnap pełną obsługę zdjęć: wybieranie z galerii, robienie aparatem, wyświetlanie w kartach i na ekranie szczegółowym, trwały zapis na dysku oraz ekran galerii z gridem, podglądem pełnoekranowym i usuwaniem.
 
 ---
 
-## Design spec
+## Design Spec
 
-### Architektura nawigacji
+### Zaktualizowany typ danych
 
 ```
-app/
-  _layout.tsx          ← Root Stack (dark theme header)
-  (tabs)/
-    _layout.tsx        ← Tab Navigator (3 zakładki)
-    index.tsx          ← Home — lista podróży
-    explore.tsx        ← Explore — nowy ekran
-    profile.tsx        ← Profile — nowy ekran
-  trip/
-    [id].tsx           ← TripDetail — ekran szczegółów
+TripData {
+  title: string;
+  destination: string;
+  date: string;
+  rating: number;
+  imageUri?: string;       // główne zdjęcie podróży
+  galleryUris?: string[];  // dodatkowe zdjęcia
+}
 ```
 
-### Tab Bar — wytyczne wizualne
+### AddTripForm - wybór zdjęcia
 
-- Tło: `Colors.dark.background` (ciemne)
-- Aktywna ikona: `Colors.dark.tint` (React Blue `#61DAFB`)
-- Nieaktywna ikona: `#8B95A5`
-- Ikony: Ionicons - `home`, `compass-outline`, `person`
-- Bez domyślnego headera (`headerShown: false`)
-- Bez górnej ramki (`borderTopWidth: 0`)
+- Nowy obszar w formularzu: dashed border, ikona `camera-outline`, tekst "Dodaj zdjęcie"
+- Po wybraniu zdjęcia: podgląd (Image, height 200, borderRadius 8) + przycisk "Zmień zdjęcie"
+- Kliknięcie otwiera `Alert` z trzema opcjami: Galeria, Kamera, Anuluj
+- Wybrane zdjęcie jest kopiowane do `FileSystem.documentDirectory + 'trips/'` przed zapisaniem
+- URI z documentDirectory (nie z cache!) trafia do `imageUri` nowej podróży
 
-### Ekran Explore
+### TripCard - zdjęcie nad treścią
 
-- Ciemne tło, tekst wycentrowany
-- Tytuł: "Discover new places" (styl `ScreenHeader`)
-- Podtytuł: "Coming soon..." w szarym kolorze
-- Ikona kompasu (Ionicons `compass`, rozmiar 64, kolor React Blue)
+- Jeśli `trip.imageUri` istnieje: `<Image>` na górze karty, `width: '100%'`, `height: 180`, `borderTopLeftRadius: 12`, `borderTopRightRadius: 12`
+- Jeśli brak zdjęcia: karta wygląda jak dotychczas (bez zmian)
+- Jeśli `trip.galleryUris.length > 0`: mała ikona `images` z liczbą w rogu karty
 
-### Ekran Profile
+### TripDetail - hero image
 
-- Ciemne tło
-- Awatar: kolorowe kółko z inicjałami (View + Text, bez obrazka)
-- Nazwa: Twoje imię, styl bold 22px
-- Pod spodem: "Joined March 2026" w szarym
-- Sekcja "Stats": 3 karty w rzędzie (Trips: liczba z listy, Countries: hardcoded, Rating: avg z listy)
+- Jeśli `trip.imageUri` istnieje: duży obraz na górze (`height: 250`, `width: '100%'`)
+- Jeśli brak: placeholder z ikoną `image-outline` (size 64, color `#4A6FA5`) i tekstem "Brak zdjęcia", tło `#1A2744`
+- Pod hero image (lub placeholder): przycisk "Galeria (N)" z ikoną `images-outline`, linkujący do ekranu galerii
 
-### Ekran TripDetail (`app/trip/[id].tsx`)
+### Ekran galerii - `app/trip/gallery/[id].tsx`
 
-- Header Stack: tytuł = nazwa podróży (dynamicznie z params)
-- `headerStyle.backgroundColor`: `Colors.dark.background`
-- `headerTintColor`: `Colors.dark.tint`
-- Layout ekranu:
-  - Górna sekcja: duży tytuł (24px bold), destynacja z ikoną `location` (16px szary)
-  - Data podróży z ikoną `calendar` (14px szary)
-  - Komponent `RatingStars` z oceną
-  - Przycisk "Powrót do listy" - `Pressable` z `router.back()`
-  - Styl przycisku: tło React Blue, borderRadius 8, padding 12
+- **Header**: tytuł podróży + liczba zdjęć (np. "Tokio — 5 zdjęć")
+- **Grid**: `FlatList` z `numColumns={3}`, gap 4px, zdjęcia kwadratowe (1:1)
+- **Pusty stan**: ikona `images-outline` + tekst "Brak zdjęć - dodaj pierwsze!"
+- **FAB**: okrągły przycisk w prawym dolnym rogu - `position: 'absolute'`, `bottom: 20`, `right: 20`, `width: 56`, `height: 56`, `borderRadius: 28`, tło `#61DAFB`, ikona `camera-outline`
+- FAB otwiera `Alert` z opcjami: Galeria, Kamera, Anuluj
+- Tło: `Colors.background` (dark theme)
 
-### Nawigacja Home → TripDetail
+### Podgląd pełnoekranowy - Modal
 
-- `TripCard` opakowany w `<Link>` z `expo-router`
-- `href` przekazuje: `pathname: '/trip/[id]'`, `params: { id, title, destination, date, rating }`
-- Link nie dodaje własnych styli (użyj `asChild` jeśli potrzebne)
+- Kliknięcie zdjęcia w gridzie otwiera `<Modal>` z:
+  - Czarne tło, `animationType="fade"`
+  - `<Image>` z `resizeMode="contain"` na pełnym ekranie
+  - Przycisk zamknięcia (X) - `position: 'absolute'`, `top: 50`, `right: 20`
+  - Przycisk usunięcia (kosz) - `position: 'absolute'`, `bottom: 50`, `left: 20`
+  - Usunięcie wymaga potwierdzenia `Alert.alert` → `FileSystem.deleteAsync(uri)` → aktualizacja stanu
+
+### Zapis zdjęć
+
+- Każde zdjęcie kopiowane do `FileSystem.documentDirectory + 'trips/{tripId}/'`
+- Folder per podróż (nie jeden wspólny)
+- Po usunięciu - `FileSystem.deleteAsync()` kasuje plik z dysku
 
 ---
 
 ## Kroki
 
-### Krok 0 - Przygotowanie brancha
+### Krok 0 - Instalacja
+
+Zainstaluj wymagane pakiety:
 
 ```bash
-git checkout lesson-5
+npx expo install expo-image-picker expo-file-system
 ```
 
-### Krok 1 - Root Stack Layout
+### Krok 1 - Rozszerzenie typu TripData
 
-Utwórz / zmodyfikuj `app/_layout.tsx`:
+W `types/trip.ts` dodaj dwa nowe opcjonalne pola do interfejsu `TripData`:
 
-- Importuj `Stack` z `expo-router`
-- Ustaw `screenOptions` z ciemnym tłem headera i jasnym kolorem tekstu
-- Zdefiniuj `Stack.Screen` dla `(tabs)` z `headerShown: false`
-- Zdefiniuj `Stack.Screen` dla `trip/[id]` z tytułem "Trip Details"
+- `imageUri?: string` - główne zdjęcie podróży
+- `galleryUris?: string[]` - tablica dodatkowych zdjęć
 
-### Krok 2 - Tab Navigator
+Oba pola opcjonalne (`?`) - istniejące podróże bez zdjęć dalej działają.
 
-Zmodyfikuj `app/(tabs)/_layout.tsx`:
+### Krok 2 - Utility: zarządzanie plikami
 
-- Importuj `Tabs` z `expo-router` i `Ionicons`
-- W `screenOptions` ustaw kolory tab bara i ukryj header
-- Zdefiniuj 3 zakładki: `index` (Home), `explore` (Explore), `profile` (Profile)
-- Każda zakładka ma swoją ikonę Ionicons i tytuł
-- `tabBarStyle` z ciemnym tłem i `borderTopWidth: 0`
+Utwórz plik `utils/imageStorage.ts` z trzema funkcjami:
 
-### Krok 3 - Ekran Explore
+- `ensureTripFolder(tripId: string): Promise<string>` - tworzy `documentDirectory/trips/{tripId}/` jeśli nie istnieje, zwraca ścieżkę. Użyj `FileSystem.getInfoAsync` + `FileSystem.makeDirectoryAsync`.
+- `saveImageToTrip(uri: string, tripId: string): Promise<string>` - kopiuje plik z cache do folderu tripa (`FileSystem.copyAsync`), zwraca nowe URI.
+- `deleteImage(uri: string): Promise<void>` - usuwa plik z dysku (`FileSystem.deleteAsync`).
 
-Utwórz `app/(tabs)/explore.tsx`:
+### Krok 3 - pickImage i takePhoto
 
-- Komponent z ciemnym tłem (flex: 1)
-- Ikona kompasu wycentrowana
-- Tytuł i podtytuł wg design spec-a
+W `AddTripForm.tsx`:
 
-### Krok 4 - Ekran Profile
+- Dodaj state: `const [imageUri, setImageUri] = useState<string>()`
+- Napisz funkcję `pickImage` - wywołuje `ImagePicker.launchImageLibraryAsync` z opcjami `mediaTypes: ['images']`, `allowsEditing: true`, `aspect: [16, 9]`, `quality: 0.8`. Jeśli nie anulowano — kopiuje zdjęcie przez `saveImageToTrip` i zapisuje URI do state.
+- Napisz funkcję `takePhoto` - najpierw `ImagePicker.requestCameraPermissionsAsync()`. Jeśli `status !== 'granted'` → `Alert` i return. W przeciwnym razie `launchCameraAsync`, kopiowanie i zapis jak wyżej.
+- Dodaj `handleAddPhoto` - `Alert.alert` z trzema przyciskami: Galeria (`pickImage`), Kamera (`takePhoto`), Anuluj.
 
-Utwórz `app/(tabs)/profile.tsx`:
+### Krok 4 - Podgląd zdjęcia w formularzu
 
-- Awatar z inicjałami (View z borderRadius: 9999)
-- Imię, data dołączenia
-- Sekcja stats: 3 karty w `flexDirection: 'row'`
-- Każda karta: wartość (bold, duża) + etykieta (szara, mała)
+W renderze `AddTripForm.tsx`:
 
-### Krok 5 - Ekran TripDetail
+- Jeśli `imageUri` istnieje: `<Image source={{ uri: imageUri }}` ze stylem `preview` (width 100%, height 200, borderRadius 8) + `<Pressable>` "Zmień zdjęcie" (wywołuje `handleAddPhoto`)
+- Jeśli brak: `<Pressable>` z dashed border, ikoną `camera-outline` i tekstem "Dodaj zdjęcie" (wywołuje `handleAddPhoto`)
+- Przy tworzeniu podróży (submit) przekaż `imageUri` w obiekcie `TripData`
 
-Utwórz `app/trip/[id].tsx`:
+### Krok 5 - Zdjęcie w TripCard
 
-- `useLocalSearchParams` - odczytaj `id`, `title`, `destination`, `date`, `rating`
-- `Stack.Screen options` - ustaw tytuł dynamicznie z `title`
-- Wyświetl: tytuł, destynacja z ikoną, data z ikoną, RatingStars
-- Przycisk "Powrót do listy" z `useRouter().back()`
-- Styl wg design spec-a
+W `components/TripCard.tsx`:
 
-### Krok 6 - Podłącz nawigację z Home
+- Importuj `Image` z `react-native`
+- W renderze, przed treścią karty: `{trip.imageUri && <Image source={{ uri: trip.imageUri }} style={styles.cardImage} />}`
+- Styl `cardImage`: `width: '100%'`, `height: 180`, `borderTopLeftRadius: 12`, `borderTopRightRadius: 12`
 
-W `app/(tabs)/index.tsx`:
+### Krok 6 - Hero image w TripDetail
 
-- Importuj `Link` z `expo-router`
-- Opakuj każdy `TripCard` w `<Link>`
-- Przekaż `href={{ pathname: '/trip/[id]', params: { ... } }}`
-- Sprawdź, czy kliknięcie karty otwiera TripDetail
+W `app/trip/[id].tsx`:
 
-### Krok 7 - Testowanie
+- Jeśli `trip.imageUri` istnieje: `<Image>` ze stylem `heroImage` (width 100%, height 250)
+- Jeśli brak: `<View style={styles.placeholder}>` z ikoną `image-outline` (size 64, color `#4A6FA5`) i tekstem "Brak zdjęcia"
+- Pod spodem: `<Link href={'/trip/gallery/${trip.id}'}` z tekstem "Galeria (N)" i ikoną `images-outline`
 
-- Tab bar wyświetla 3 zakładki z ikonami
-- Kliknięcie zakładki przełącza ekran bez utraty stanu
-- Kliknięcie TripCard otwiera ekran TripDetail z animacją slide-in
-- Dane podróży wyświetlają się poprawnie na TripDetail
-- Przycisk "Powrót" i gest swipe-back działają
-- Header TripDetail ma ciemne tło i tytuł podróży
+### Krok 7 - Ekran galerii
 
-### Krok 8 - Modal "Add Trip"
+Utwórz `app/trip/gallery/[id].tsx`:
 
-Dodaj ekran `app/add-trip.tsx`:
+- Odczytaj `id` z `useLocalSearchParams`
+- Znajdź trip po id (z kontekstu lub hardcoded danych)
+- `FlatList` z `numColumns={3}` - każdy item to `<Pressable>` z kwadratowym `<Image>`
+- Szerokość itemu: `(Dimensions.get('window').width - 16) / 3` (4px gap × 4)
+- Pusty stan gdy brak zdjęć: ikona + tekst
 
-- W Root `_layout.tsx` dodaj `Stack.Screen` z `presentation: 'modal'`
-- Przenieś `AddTripForm` na ten ekran
-- Na Home dodaj `Pressable` / FAB (Floating Action Button) który otwiera modal: `router.push('/add-trip')`
-- Po dodaniu podróży — `router.back()` zamyka modal
+### Krok 8 - FAB + dodawanie zdjęć do galerii
 
-### Krok 9 - Animacje przejść
+- Dodaj okrągły przycisk FAB (position absolute, bottom 20, right 20)
+- `onPress` → `Alert` z Galeria/Kamera/Anuluj
+- Po wybraniu zdjęcia: `saveImageToTrip(uri, tripId)` → dodaj URI do `galleryUris` w stanie
+- Grid odświeża się automatycznie
 
-W `Stack.Screen` dla `trip/[id]` dodaj:
+### Krok 9 - Modal pełnoekranowy z usuwaniem
 
-```tsx
-options={{
-  animation: 'slide_from_bottom',
-  // lub: 'fade', 'slide_from_right', 'flip'
-}}
-```
+- Kliknięcie zdjęcia w gridzie ustawia state `selectedUri`
+- `<Modal visible={!!selectedUri}>` z czarnym tłem
+- `<Image>` z `resizeMode="contain"` na pełnym ekranie
+- Przycisk X (zamknięcie) - prawy górny róg
+- Przycisk kosza - lewy dolny róg → `Alert.alert` potwierdzenie → `deleteImage(uri)` → aktualizacja `galleryUris` w stanie → zamknięcie modala
 
-Przetestuj różne animacje i wybierz najlepszą dla TravelSnap.
+### Krok 10 - Badge w TripCard
 
-### Krok 10 - Ulubione
+Jeśli `trip.galleryUris && trip.galleryUris.length > 0`, pokaż w rogu karty małą ikonę `images` + liczbę (np. "3").
 
-Na ekranie TripDetail:
+---
 
-- Dodaj ikonę serduszka w prawym górnym rogu headera (`headerRight`)
-- Kliknięcie toggleuje stan `isFavorite` (useState)
-- Ikona: `heart` (wypełniony, czerwony) / `heart-outline` (pusty, szary)
-- Zapisz ulubione w stanie — bonus: użyj `AsyncStorage`
+### Krok 11 - Swipe do zamknięcia modala
+
+Dodaj `PanResponder` lub `react-native-gesture-handler` - swipe w dół zamyka modal podglądu.
+
+### Krok 12 - Zmiana głównego zdjęcia
+
+W modalu dodaj przycisk "Ustaw jako główne". Po kliknięciu: `trip.imageUri` = wybrane URI z galerii. To zdjęcie pojawia się jako hero w TripCard i TripDetail.
+
+### Krok 13 - Animowany FAB
+
+Dodaj `Animated.Value` do FAB: scrollowanie w dół chowa przycisk (translateY), scrollowanie w górę pokazuje. Użyj `onScroll` z FlatList.
 
 ---

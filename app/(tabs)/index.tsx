@@ -4,66 +4,17 @@ import TripCard from "@/components/TripCard";
 import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
-import type { Trip } from "@/types/trip";
+import { useTrips } from "@/context/TripsContext";
 import { Ionicons } from "@expo/vector-icons";
-import { Link, router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { Link, router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
-	const [trips, setTrips] = useState<Trip[]>([]);
-	const {
-		newTripId,
-		newTripTitle,
-		newTripDestination,
-		newTripDate,
-		newTripRating,
-	} = useLocalSearchParams<{
-		newTripId?: string;
-		newTripTitle?: string;
-		newTripDestination?: string;
-		newTripDate?: string;
-		newTripRating?: string;
-	}>();
-
-	useEffect(() => {
-		if (
-			!newTripId ||
-			!newTripTitle ||
-			!newTripDestination ||
-			!newTripDate ||
-			!newTripRating
-		) {
-			return;
-		}
-
-		const rating = Number(newTripRating);
-		if (Number.isNaN(rating)) {
-			return;
-		}
-
-		setTrips((prev) => [
-			...prev,
-			{
-				id: newTripId,
-				title: newTripTitle,
-				destination: newTripDestination,
-				date: newTripDate,
-				rating,
-			},
-		]);
-		router.setParams({
-			newTripId: undefined,
-			newTripTitle: undefined,
-			newTripDestination: undefined,
-			newTripDate: undefined,
-			newTripRating: undefined,
-		});
-	}, [newTripId, newTripTitle, newTripDestination, newTripDate, newTripRating]);
+	const { trips, deleteTrip } = useTrips();
 
 	const handleDeleteTrip = (id: string) => {
-		setTrips((prev) => prev.filter((trip) => trip.id !== id));
+		deleteTrip(id);
 	};
 
 	const averageRating =
@@ -99,10 +50,6 @@ export default function HomeScreen() {
 								pathname: "/trip/[id]",
 								params: {
 									id: trip.id,
-									title: trip.title,
-									destination: trip.destination,
-									date: trip.date,
-									rating: trip.rating.toString(),
 								},
 							}}
 							asChild

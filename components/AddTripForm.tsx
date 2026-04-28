@@ -1,10 +1,13 @@
 import { Colors } from "@/constants/Colors";
 import { MONTH_LENGTH, YEAR_LENGTH } from "@/constants/Constants";
 import { Spacing } from "@/constants/Spacing";
+import { handleAddPhoto } from "@/lib/pickImage";
 import type { TripData } from "@/types/trip";
+import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
 	Alert,
+	Image,
 	Keyboard,
 	Pressable,
 	StyleSheet,
@@ -22,6 +25,8 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 	const [destination, setDestination] = useState("");
 	const [dateDigits, setDateDigits] = useState("");
 	const [rating, setRating] = useState("");
+	const [imageUri, setImageUri] = useState<string>();
+	const [draftTripId] = useState(() => Date.now().toString());
 
 	const date =
 		dateDigits.length <= YEAR_LENGTH
@@ -77,6 +82,7 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 			destination,
 			date,
 			rating: Number(rating),
+			imageUri,
 		});
 		setTitle("");
 		setDestination("");
@@ -119,6 +125,31 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 					keyboardType="numeric"
 				/>
 			</View>
+			<View style={styles.imageContainer}>
+				{imageUri ? (
+					<>
+						<Image source={{ uri: imageUri }} style={styles.image} />
+						<Pressable
+							onPress={() => handleAddPhoto(draftTripId, setImageUri)}
+							style={styles.changeImageButton}
+						>
+							<Text style={styles.imageText}>Zmień zdjęcie</Text>
+						</Pressable>
+					</>
+				) : (
+					<Pressable
+						onPress={() => handleAddPhoto(draftTripId, setImageUri)}
+						style={styles.imageButton}
+					>
+						<Ionicons
+							name="camera-outline"
+							size={24}
+							color={Colors.textPrimary}
+						/>
+						<Text style={styles.imageText}>Dodaj zdjęcie</Text>
+					</Pressable>
+				)}
+			</View>
 			<Pressable onPress={handleAddTrip} style={styles.button}>
 				<Text style={styles.buttonText}>Dodaj</Text>
 			</Pressable>
@@ -154,5 +185,33 @@ const styles = StyleSheet.create({
 	buttonText: {
 		color: Colors.textPrimary,
 		fontSize: 16,
+	},
+	imageContainer: {
+		alignItems: "center",
+		justifyContent: "center",
+		borderWidth: 1,
+		borderStyle: "dashed",
+		borderColor: Colors.inputBorder,
+		borderRadius: Spacing.sm,
+		padding: Spacing.sm,
+	},
+	image: {
+		width: "100%",
+		height: 200,
+		borderRadius: Spacing.sm,
+	},
+	imageText: {
+		color: Colors.textPrimary,
+		fontSize: 16,
+	},
+	imageButton: {
+		alignItems: "center",
+		justifyContent: "center",
+		gap: Spacing.xs,
+		padding: Spacing.md,
+	},
+	changeImageButton: {
+		paddingVertical: Spacing.sm,
+		paddingHorizontal: Spacing.md,
 	},
 });
