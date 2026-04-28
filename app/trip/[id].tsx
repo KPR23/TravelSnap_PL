@@ -33,7 +33,7 @@ export default function TripDetailScreen() {
 	};
 
 	const handleDeleteTrip = async () => {
-		Alert.alert("Usuń podróż?", "Tej operacji nie można cofnąć.", [
+		Alert.alert("Usuń podróż", "Tej operacji nie można cofnąć. Czy na pewno?", [
 			{ text: "Anuluj", style: "cancel" },
 			{ text: "Usuń", style: "destructive", onPress: handleDeleteTripConfirm },
 		]);
@@ -68,16 +68,35 @@ export default function TripDetailScreen() {
 					headerTintColor: Colors.primary,
 					headerBackVisible: false,
 					headerRight: () => (
-						<Pressable
-							style={styles.favoriteButton}
-							onPress={handleToggleFavorite}
-						>
-							<Ionicons
-								name={isFavorite ? "heart" : "heart-outline"}
-								size={24}
-								color={isFavorite ? Colors.accent : Colors.textSecondary}
-							/>
-						</Pressable>
+						<View style={styles.headerActions}>
+							<Link
+								href={{
+									pathname: "/trip/edit/[id]",
+									params: {
+										id: id as string,
+									},
+								}}
+								asChild
+							>
+								<Pressable style={styles.headerButton}>
+									<Ionicons
+										name="create-outline"
+										size={24}
+										color={Colors.textSecondary}
+									/>
+								</Pressable>
+							</Link>
+							<Pressable
+								style={styles.headerButton}
+								onPress={handleToggleFavorite}
+							>
+								<Ionicons
+									name={isFavorite ? "heart" : "heart-outline"}
+									size={24}
+									color={isFavorite ? Colors.accent : Colors.textSecondary}
+								/>
+							</Pressable>
+						</View>
 					),
 				}}
 			/>
@@ -242,7 +261,11 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		fontWeight: "600",
 	},
-	favoriteButton: {
+	headerActions: {
+		flexDirection: "row",
+		alignItems: "center",
+	},
+	headerButton: {
 		padding: Spacing.sm,
 		display: "flex",
 		alignItems: "center",

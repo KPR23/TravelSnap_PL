@@ -2,7 +2,7 @@ import { Colors } from "@/constants/Colors";
 import type { Trip, TripData } from "@/types/trip";
 import { loadTrips, saveTrips } from "@/utils/tripStorage";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 type TripsContextValue = {
 	trips: Trip[];
@@ -116,7 +116,11 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 	}, [trips]);
 
 	if (loading) {
-		return <ActivityIndicator size="large" color={Colors.primary} />;
+		return (
+			<View style={styles.loadingContainer}>
+				<ActivityIndicator size="large" color={Colors.primary} />
+			</View>
+		);
 	}
 
 	return (
@@ -133,3 +137,12 @@ export function useTrips(): TripsContextValue {
 
 	return context;
 }
+
+const styles = StyleSheet.create({
+	loadingContainer: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: Colors.background,
+	},
+});
