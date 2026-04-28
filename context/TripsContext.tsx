@@ -12,6 +12,7 @@ type TripsContextValue = {
 	addGalleryImage: (tripId: string, uri: string) => Promise<void>;
 	removeGalleryImage: (tripId: string, uri: string) => Promise<void>;
 	setMainImage: (tripId: string, uri: string) => Promise<void>;
+	toggleFavorite: (tripId: string) => Promise<void>;
 	getTripById: (id: string) => Trip | undefined;
 };
 
@@ -98,6 +99,14 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 									(itemUri) => itemUri !== uri,
 								),
 							}
+						: trip,
+				);
+				await persistTrips(updatedTrips);
+			},
+			toggleFavorite: async (tripId: string) => {
+				const updatedTrips = trips.map((trip) =>
+					trip.id === tripId
+						? { ...trip, isFavorite: !trip.isFavorite }
 						: trip,
 				);
 				await persistTrips(updatedTrips);

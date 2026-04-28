@@ -4,7 +4,6 @@ import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
 import {
 	Image,
 	Pressable,
@@ -17,16 +16,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TripDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
-	const { getTripById } = useTrips();
+	const { getTripById, toggleFavorite } = useTrips();
 	const router = useRouter();
 	const trip = getTripById(id);
+	const isFavorite = !!trip?.isFavorite;
 	const parsedRating = trip?.rating ?? 0;
 	const galleryCount = trip
 		? Array.from(
 				new Set([trip.imageUri, ...(trip.galleryUris ?? [])].filter(Boolean)),
 			).length
 		: 0;
-	const [isFavorite, setIsFavorite] = useState(false);
+
+	const handleToggleFavorite = async () => {
+		await toggleFavorite(id);
+	};
 
 	if (!trip) {
 		return (
@@ -50,7 +53,7 @@ export default function TripDetailScreen() {
 					headerRight: () => (
 						<Pressable
 							style={styles.favoriteButton}
-							onPress={() => setIsFavorite(!isFavorite)}
+							onPress={handleToggleFavorite}
 						>
 							<Ionicons
 								name={isFavorite ? "heart" : "heart-outline"}
