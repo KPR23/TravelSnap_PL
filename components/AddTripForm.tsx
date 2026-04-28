@@ -17,7 +17,7 @@ import {
 } from "react-native";
 
 type AddTripFormProps = {
-	onAddTrip: (data: TripData) => void;
+	onAddTrip: (data: TripData) => Promise<void>;
 };
 
 export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
@@ -57,7 +57,7 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 		);
 	};
 
-	const handleAddTrip = (): void => {
+	const handleAddTrip = async (): Promise<void> => {
 		Keyboard.dismiss();
 
 		if (!title || !destination || !dateDigits || !rating) {
@@ -77,7 +77,7 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 			return;
 		}
 
-		onAddTrip({
+		await onAddTrip({
 			title,
 			destination,
 			date,

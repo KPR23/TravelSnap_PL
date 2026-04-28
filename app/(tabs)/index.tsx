@@ -13,8 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function HomeScreen() {
 	const { trips, deleteTrip } = useTrips();
 
-	const handleDeleteTrip = (id: string) => {
-		deleteTrip(id);
+	const handleDeleteTrip = async (id: string) => {
+		await deleteTrip(id);
 	};
 
 	const averageRating =

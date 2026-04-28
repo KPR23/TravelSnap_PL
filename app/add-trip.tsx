@@ -9,8 +9,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function AddTripScreen() {
 	const { addTrip } = useTrips();
 
-	const handleAddTrip = (data: TripData) => {
-		addTrip(data);
+	const handleAddTrip = async (data: TripData) => {
+		await addTrip(data);
 		router.replace({
 			pathname: "/(tabs)",
 		});
