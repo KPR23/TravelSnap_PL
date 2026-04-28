@@ -3,15 +3,17 @@ import ScreenHeader from "@/components/ScreenHeader";
 import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
+import { useTrips } from "@/context/TripsContext";
+import { getTripStats } from "@/utils/tripStats";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ExploreScreen() {
+	const { trips } = useTrips();
+	const { tripCount, averageRating, uniqueDestinations } = getTripStats(trips);
+
 	const NAME = "Kacper Zabłudowski";
 	const JOINED_DATE = "March 2026";
-	const COUNTRIES_VISITED = 10;
-	const AVERAGE_RATING = 4.5;
-	const UNIQUE_DESTINATIONS = 10;
 
 	return (
 		<SafeAreaView style={styles.container}>
@@ -25,9 +27,9 @@ export default function ExploreScreen() {
 			</View>
 			<View>
 				<TripStats
-					tripCount={COUNTRIES_VISITED}
-					averageRating={AVERAGE_RATING}
-					uniqueDestinations={UNIQUE_DESTINATIONS}
+					tripCount={tripCount}
+					averageRating={averageRating}
+					uniqueDestinations={uniqueDestinations}
 				/>
 			</View>
 		</SafeAreaView>

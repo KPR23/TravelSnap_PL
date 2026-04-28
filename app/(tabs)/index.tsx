@@ -5,6 +5,7 @@ import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
+import { getTripStats } from "@/utils/tripStats";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet } from "react-native";
@@ -12,30 +13,22 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
 	const { trips, deleteTrip } = useTrips();
+	const { tripCount, averageRating, uniqueDestinations } = getTripStats(trips);
 
 	const handleDeleteTrip = async (id: string) => {
 		await deleteTrip(id);
 	};
 
-	const averageRating =
-		trips.length > 0
-			? trips.reduce((acc, trip) => acc + trip.rating, 0) / trips.length
-			: 0;
-
-	const uniqueDestinations = new Set(
-		trips.map((trip) => trip.destination.toLowerCase().trim()),
-	).size;
-
 	return (
 		<SafeAreaView style={styles.container}>
 			<ScreenHeader
-				tripCount={trips.length}
+				tripCount={tripCount}
 				title="TravelSnap"
 				subtitle="Twój dziennik podróży"
 				showBadge={true}
 			/>
 			<TripStats
-				tripCount={trips.length}
+				tripCount={tripCount}
 				averageRating={averageRating}
 				uniqueDestinations={uniqueDestinations}
 			/>
