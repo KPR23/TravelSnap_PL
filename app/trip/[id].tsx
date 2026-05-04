@@ -4,8 +4,8 @@ import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
 import {
+	Alert,
 	Image,
 	Pressable,
 	ScrollView,
@@ -17,22 +17,42 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TripDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
-	const { getTripById } = useTrips();
+	const { getTripById, toggleFavorite, deleteTrip } = useTrips();
 	const router = useRouter();
 	const trip = getTripById(id);
+	const isFavorite = !!trip?.isFavorite;
 	const parsedRating = trip?.rating ?? 0;
 	const galleryCount = trip
 		? Array.from(
 				new Set([trip.imageUri, ...(trip.galleryUris ?? [])].filter(Boolean)),
 			).length
 		: 0;
-	const [isFavorite, setIsFavorite] = useState(false);
+
+	const handleToggleFavorite = async () => {
+		await toggleFavorite(id);
+	};
+
+	const handleDeleteTrip = async () => {
+		Alert.alert("Usuń podróż", "Tej operacji nie można cofnąć. Czy na pewno?", [
+			{ text: "Anuluj", style: "cancel" },
+			{ text: "Usuń", style: "destructive", onPress: handleDeleteTripConfirm },
+		]);
+	};
+
+	const handleDeleteTripConfirm = async () => {
+		await deleteTrip(id);
+		router.back();
+	};
 
 	if (!trip) {
 		return (
 			<SafeAreaView style={styles.container}>
 				<View style={styles.placeholder}>
-					<Ionicons name="alert-circle-outline" size={56} color={Colors.placeholder} />
+					<Ionicons
+						name="alert-circle-outline"
+						size={56}
+						color={Colors.placeholder}
+					/>
 					<Text style={styles.placeholderText}>Nie znaleziono podróży</Text>
 				</View>
 			</SafeAreaView>
@@ -48,16 +68,35 @@ export default function TripDetailScreen() {
 					headerTintColor: Colors.primary,
 					headerBackVisible: false,
 					headerRight: () => (
-						<Pressable
-							style={styles.favoriteButton}
-							onPress={() => setIsFavorite(!isFavorite)}
-						>
-							<Ionicons
-								name={isFavorite ? "heart" : "heart-outline"}
-								size={24}
-								color={isFavorite ? Colors.accent : Colors.textSecondary}
-							/>
-						</Pressable>
+						<View style={styles.headerActions}>
+							<Link
+								href={{
+									pathname: "/trip/edit/[id]",
+									params: {
+										id: id as string,
+									},
+								}}
+								asChild
+							>
+								<Pressable style={styles.headerButton}>
+									<Ionicons
+										name="create-outline"
+										size={24}
+										color={Colors.textSecondary}
+									/>
+								</Pressable>
+							</Link>
+							<Pressable
+								style={styles.headerButton}
+								onPress={handleToggleFavorite}
+							>
+								<Ionicons
+									name={isFavorite ? "heart" : "heart-outline"}
+									size={24}
+									color={isFavorite ? Colors.accent : Colors.textSecondary}
+								/>
+							</Pressable>
+						</View>
 					),
 				}}
 			/>
@@ -117,8 +156,29 @@ export default function TripDetailScreen() {
 							<Text style={styles.meta}>{trip.date}</Text>
 						</View>
 						<RatingStars rating={parsedRating} />
-						<Pressable style={styles.backButton} onPress={() => router.back()}>
+					</View>
+					<View style={styles.buttonsContainer}>
+						<Pressable
+							style={[styles.actionButton, styles.backButton]}
+							onPress={() => router.back()}
+						>
+							<Ionicons
+								name="arrow-back-outline"
+								size={20}
+								color={Colors.background}
+							/>
 							<Text style={styles.backButtonText}>Powrót do listy</Text>
+						</Pressable>
+						<Pressable
+							style={[styles.actionButton, styles.deleteButton]}
+							onPress={handleDeleteTrip}
+						>
+							<Text style={styles.deleteButtonText}>Usuń podróż</Text>
+							<Ionicons
+								name="trash-outline"
+								size={20}
+								color={Colors.background}
+							/>
 						</Pressable>
 					</View>
 				</ScrollView>
@@ -183,23 +243,46 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		color: Colors.textSecondary,
 	},
-	backButton: {
-		marginTop: "auto",
-		backgroundColor: Colors.primary,
-		borderRadius: 8,
-		padding: 12,
+	actionButton: {
+		flex: 1,
+		minHeight: 48,
+		borderRadius: Spacing.sm,
+		paddingHorizontal: Spacing.sm,
 		alignItems: "center",
 		justifyContent: "center",
+		flexDirection: "row",
+		gap: Spacing.xs,
+	},
+	backButton: {
+		backgroundColor: Colors.primary,
 	},
 	backButtonText: {
 		color: Colors.background,
 		fontSize: 16,
 		fontWeight: "600",
 	},
-	favoriteButton: {
+	headerActions: {
+		flexDirection: "row",
+		alignItems: "center",
+	},
+	headerButton: {
 		padding: Spacing.sm,
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
+	},
+	deleteButton: {
+		backgroundColor: Colors.accent,
+	},
+	deleteButtonText: {
+		color: Colors.background,
+		fontSize: 16,
+		fontWeight: "600",
+	},
+	buttonsContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: Spacing.sm,
+		marginTop: Spacing.lg,
 	},
 });

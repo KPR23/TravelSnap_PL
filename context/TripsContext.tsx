@@ -1,66 +1,77 @@
+import { Colors } from "@/constants/Colors";
 import type { Trip, TripData } from "@/types/trip";
-import { createContext, useContext, useMemo, useState } from "react";
+import { loadTrips, saveTrips } from "@/utils/tripStorage";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 type TripsContextValue = {
 	trips: Trip[];
-	addTrip: (data: TripData) => string;
-	deleteTrip: (id: string) => void;
-	addGalleryImage: (tripId: string, uri: string) => void;
-	removeGalleryImage: (tripId: string, uri: string) => void;
-	setMainImage: (tripId: string, uri: string) => void;
+	addTrip: (data: TripData) => Promise<string>;
+	updateTrip: (id: string, data: Partial<TripData>) => Promise<void>;
+	deleteTrip: (id: string) => Promise<void>;
+	addGalleryImage: (tripId: string, uri: string) => Promise<void>;
+	removeGalleryImage: (tripId: string, uri: string) => Promise<void>;
+	setMainImage: (tripId: string, uri: string) => Promise<void>;
+	toggleFavorite: (tripId: string) => Promise<void>;
 	getTripById: (id: string) => Trip | undefined;
 };
-
-const MOCK_TRIPS: Trip[] = [
-	{
-		id: "mock-1",
-		title: "Weekend w Porto",
-		destination: "Porto",
-		date: "2026-03",
-		rating: 5,
-		imageUri:
-			"https://images.unsplash.com/photo-1513735492246-483525079686?w=1200",
-		galleryUris: [
-			"https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=900",
-			"https://images.unsplash.com/photo-1548707309-dcebeab9ea9b?w=900",
-			"https://images.unsplash.com/photo-1566552881560-0be862a7c445?w=900",
-		],
-	},
-	{
-		id: "mock-2",
-		title: "Miejski wypad do Berlina",
-		destination: "Berlin",
-		date: "2025-11",
-		rating: 4,
-		galleryUris: [],
-	},
-];
 
 const TripsContext = createContext<TripsContextValue | undefined>(undefined);
 
 export function TripsProvider({ children }: { children: React.ReactNode }) {
-	const [trips, setTrips] = useState<Trip[]>(MOCK_TRIPS);
+	const [trips, setTrips] = useState<Trip[]>([]);
+	const [loading, setLoading] = useState(true);
 
-	const value = useMemo<TripsContextValue>(
-		() => ({
+	useEffect(() => {
+		async function loadTripsAsync() {
+			const trips = await loadTrips();
+			setTrips(trips);
+			setLoading(false);
+		}
+
+		loadTripsAsync();
+	}, []);
+
+	const value = useMemo<TripsContextValue>(() => {
+		const persistTrips = async (getNextTrips: (prevTrips: Trip[]) => Trip[]) => {
+			let nextTrips: Trip[] | undefined;
+
+			setTrips((prevTrips) => {
+				nextTrips = getNextTrips(prevTrips);
+				return nextTrips;
+			});
+
+			if (nextTrips) {
+				await saveTrips(nextTrips);
+			}
+		};
+
+		return {
 			trips,
-			addTrip: (data) => {
+			addTrip: async (data: TripData) => {
 				const id = Date.now().toString();
 				const mergedGalleryUris = Array.from(
 					new Set([data.imageUri, ...(data.galleryUris ?? [])].filter(Boolean)),
 				) as string[];
-				setTrips((prev) => [
-					...prev,
-					{ id, ...data, galleryUris: mergedGalleryUris },
-				]);
+
+				const newTrip = { id, ...data, galleryUris: mergedGalleryUris };
+				await persistTrips((prevTrips) => [...prevTrips, newTrip]);
+
 				return id;
 			},
-			deleteTrip: (id) => {
-				setTrips((prev) => prev.filter((trip) => trip.id !== id));
+			updateTrip: async (id: string, data: Partial<TripData>) => {
+				await persistTrips((prevTrips) =>
+					prevTrips.map((trip) => (trip.id === id ? { ...trip, ...data } : trip)),
+				);
 			},
-			setMainImage: (tripId: string, uri: string) => {
-				setTrips((prev) =>
-					prev.map((trip) =>
+			deleteTrip: async (id: string) => {
+				await persistTrips((prevTrips) =>
+					prevTrips.filter((trip) => trip.id !== id),
+				);
+			},
+			setMainImage: async (tripId: string, uri: string) => {
+				await persistTrips((prevTrips) =>
+					prevTrips.map((trip) =>
 						trip.id === tripId
 							? {
 									...trip,
@@ -73,18 +84,23 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 					),
 				);
 			},
-			addGalleryImage: (tripId, uri) => {
-				setTrips((prev) =>
-					prev.map((trip) =>
+			addGalleryImage: async (tripId, uri) => {
+				await persistTrips((prevTrips) =>
+					prevTrips.map((trip) =>
 						trip.id === tripId
-							? { ...trip, galleryUris: [...(trip.galleryUris ?? []), uri] }
+							? {
+									...trip,
+									galleryUris: Array.from(
+										new Set([...(trip.galleryUris ?? []), uri]),
+									),
+								}
 							: trip,
 					),
 				);
 			},
-			removeGalleryImage: (tripId, uri) => {
-				setTrips((prev) =>
-					prev.map((trip) =>
+			removeGalleryImage: async (tripId, uri) => {
+				await persistTrips((prevTrips) =>
+					prevTrips.map((trip) =>
 						trip.id === tripId
 							? {
 									...trip,
@@ -96,10 +112,26 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 					),
 				);
 			},
+			toggleFavorite: async (tripId: string) => {
+				await persistTrips((prevTrips) =>
+					prevTrips.map((trip) =>
+						trip.id === tripId
+							? { ...trip, isFavorite: !trip.isFavorite }
+							: trip,
+					),
+				);
+			},
 			getTripById: (id) => trips.find((trip) => trip.id === id),
-		}),
-		[trips],
-	);
+		};
+	}, [trips]);
+
+	if (loading) {
+		return (
+			<View style={styles.loadingContainer}>
+				<ActivityIndicator size="large" color={Colors.primary} />
+			</View>
+		);
+	}
 
 	return (
 		<TripsContext.Provider value={value}>{children}</TripsContext.Provider>
@@ -108,8 +140,19 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 
 export function useTrips(): TripsContextValue {
 	const context = useContext(TripsContext);
+
 	if (!context) {
 		throw new Error("useTrips must be used within TripsProvider");
 	}
+
 	return context;
 }
+
+const styles = StyleSheet.create({
+	loadingContainer: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: Colors.background,
+	},
+});

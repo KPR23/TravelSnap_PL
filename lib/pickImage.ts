@@ -8,7 +8,7 @@ import {
 
 export const pickImage = async (
 	tripId: string,
-	setImageUri: (uri: string) => void,
+	setImageUri: (uri: string) => void | Promise<void>,
 ) => {
 	try {
 		const status = await requestMediaLibraryPermissions();
@@ -27,7 +27,7 @@ export const pickImage = async (
 		if (!result.canceled) {
 			const pickedUri = result.assets[0].uri;
 			const uri = await saveImageToTrip(pickedUri, tripId);
-			setImageUri(uri);
+			await setImageUri(uri);
 		}
 	} catch {
 		Alert.alert("Nie udało się dodać zdjęcia");
@@ -36,7 +36,7 @@ export const pickImage = async (
 
 export const takePhoto = async (
 	tripId: string,
-	setImageUri: (uri: string) => void,
+	setImageUri: (uri: string) => void | Promise<void>,
 ) => {
 	const status = await requestCameraPermissions();
 
@@ -56,7 +56,7 @@ export const takePhoto = async (
 		if (!result.canceled) {
 			const pickedUri = result.assets[0].uri;
 			const uri = await saveImageToTrip(pickedUri, tripId);
-			setImageUri(uri);
+			await setImageUri(uri);
 		}
 	} catch {
 		Alert.alert("Nie udało się zrobić zdjęcia");
@@ -65,7 +65,7 @@ export const takePhoto = async (
 
 export const handleAddPhoto = async (
 	tripId: string,
-	setImageUri: (uri: string) => void,
+	setImageUri: (uri: string) => void | Promise<void>,
 ) => {
 	Alert.alert("Dodaj zdjęcie", "Wybierz źródło", [
 		{ text: "Galeria", onPress: () => pickImage(tripId, setImageUri) },

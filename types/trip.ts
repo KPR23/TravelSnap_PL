@@ -5,6 +5,7 @@ export type TripData = {
 	rating: number;
 	imageUri?: string;
 	galleryUris?: string[];
+	isFavorite?: boolean;
 };
 
 export type Trip = TripData & { id: string };

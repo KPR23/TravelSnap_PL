@@ -9,15 +9,18 @@ import {
 	Alert,
 	Image,
 	Keyboard,
+	KeyboardAvoidingView,
+	Platform,
 	Pressable,
 	StyleSheet,
 	Text,
 	TextInput,
+	TouchableWithoutFeedback,
 	View,
 } from "react-native";
 
 type AddTripFormProps = {
-	onAddTrip: (data: TripData) => void;
+	onAddTrip: (data: TripData) => Promise<void>;
 };
 
 export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
@@ -57,7 +60,7 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 		);
 	};
 
-	const handleAddTrip = (): void => {
+	const handleAddTrip = async (): Promise<void> => {
 		Keyboard.dismiss();
 
 		if (!title || !destination || !dateDigits || !rating) {
@@ -77,7 +80,7 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 			return;
 		}
 
-		onAddTrip({
+		await onAddTrip({
 			title,
 			destination,
 			date,
@@ -91,69 +94,74 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 	};
 
 	return (
-		<View style={styles.container}>
-			<View style={styles.formFields}>
-				<TextInput
-					placeholder="Tytuł"
-					placeholderTextColor={Colors.textSecondary}
-					style={styles.input}
-					value={title}
-					onChangeText={setTitle}
-				/>
-				<TextInput
-					placeholder="Destynacja"
-					placeholderTextColor={Colors.textSecondary}
-					style={styles.input}
-					value={destination}
-					onChangeText={setDestination}
-				/>
-				<TextInput
-					style={styles.input}
-					value={date}
-					onChangeText={handleDateChange}
-					keyboardType="numeric"
-					placeholder="YYYY-MM"
-					placeholderTextColor={Colors.textSecondary}
-					maxLength={7}
-				/>
-				<TextInput
-					placeholder="Ocena (1-5)"
-					placeholderTextColor={Colors.textSecondary}
-					style={styles.input}
-					onChangeText={(text) => setRating(text)}
-					value={rating}
-					keyboardType="numeric"
-				/>
-			</View>
-			<View style={styles.imageContainer}>
-				{imageUri ? (
-					<>
-						<Image source={{ uri: imageUri }} style={styles.image} />
+		<TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+			<KeyboardAvoidingView
+				style={styles.container}
+				behavior={Platform.OS === "ios" ? "padding" : "height"}
+			>
+				<View style={styles.formFields}>
+					<TextInput
+						placeholder="Tytuł"
+						placeholderTextColor={Colors.textSecondary}
+						style={styles.input}
+						value={title}
+						onChangeText={setTitle}
+					/>
+					<TextInput
+						placeholder="Destynacja"
+						placeholderTextColor={Colors.textSecondary}
+						style={styles.input}
+						value={destination}
+						onChangeText={setDestination}
+					/>
+					<TextInput
+						style={styles.input}
+						value={date}
+						onChangeText={handleDateChange}
+						keyboardType="numeric"
+						placeholder="YYYY-MM"
+						placeholderTextColor={Colors.textSecondary}
+						maxLength={7}
+					/>
+					<TextInput
+						placeholder="Ocena (1-5)"
+						placeholderTextColor={Colors.textSecondary}
+						style={styles.input}
+						onChangeText={(text) => setRating(text)}
+						value={rating}
+						keyboardType="numeric"
+					/>
+				</View>
+				<View style={styles.imageContainer}>
+					{imageUri ? (
+						<>
+							<Image source={{ uri: imageUri }} style={styles.image} />
+							<Pressable
+								onPress={() => handleAddPhoto(draftTripId, setImageUri)}
+								style={styles.changeImageButton}
+							>
+								<Text style={styles.imageText}>Zmień zdjęcie</Text>
+							</Pressable>
+						</>
+					) : (
 						<Pressable
 							onPress={() => handleAddPhoto(draftTripId, setImageUri)}
-							style={styles.changeImageButton}
+							style={styles.imageButton}
 						>
-							<Text style={styles.imageText}>Zmień zdjęcie</Text>
+							<Ionicons
+								name="camera-outline"
+								size={24}
+								color={Colors.textPrimary}
+							/>
+							<Text style={styles.imageText}>Dodaj zdjęcie</Text>
 						</Pressable>
-					</>
-				) : (
-					<Pressable
-						onPress={() => handleAddPhoto(draftTripId, setImageUri)}
-						style={styles.imageButton}
-					>
-						<Ionicons
-							name="camera-outline"
-							size={24}
-							color={Colors.textPrimary}
-						/>
-						<Text style={styles.imageText}>Dodaj zdjęcie</Text>
-					</Pressable>
-				)}
-			</View>
-			<Pressable onPress={handleAddTrip} style={styles.button}>
-				<Text style={styles.buttonText}>Dodaj</Text>
-			</Pressable>
-		</View>
+					)}
+				</View>
+				<Pressable onPress={handleAddTrip} style={styles.button}>
+					<Text style={styles.buttonText}>Dodaj</Text>
+				</Pressable>
+			</KeyboardAvoidingView>
+		</TouchableWithoutFeedback>
 	);
 }
 

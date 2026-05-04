@@ -21,9 +21,20 @@ export default function RootLayout() {
 					name="trip/[id]"
 					options={{
 						headerShown: true,
-						// Najbardziej mi sie podoba defaultowa animacja
 						animation: "default",
 						headerBackButtonDisplayMode: "default",
+						headerBackTitle: "Powrót",
+					}}
+				/>
+				<Stack.Screen
+					name="trip/edit/[id]"
+					options={{
+						headerShown: true,
+						title: "Edytuj podróż",
+						headerStyle: {
+							backgroundColor: Colors.background,
+						},
+						headerTintColor: Colors.primary,
 						headerBackTitle: "Powrót",
 					}}
 				/>

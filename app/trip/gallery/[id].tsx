@@ -58,7 +58,7 @@ export default function GalleryScreen() {
 						if (selectedUri.startsWith("file://")) {
 							await deleteImage(selectedUri);
 						}
-						removeGalleryImage(id, selectedUri);
+						await removeGalleryImage(id, selectedUri);
 						setSelectedUri(null);
 					} catch {
 						Alert.alert("Nie udało się usunąć zdjęcia");
@@ -68,8 +68,8 @@ export default function GalleryScreen() {
 		]);
 	};
 
-	const handleSetAsMainImage = (uri: string) => {
-		setMainImage(id, uri);
+	const handleSetAsMainImage = async (uri: string) => {
+		await setMainImage(id, uri);
 		setSelectedUri(null);
 		router.back();
 	};

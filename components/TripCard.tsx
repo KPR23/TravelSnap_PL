@@ -15,7 +15,7 @@ import RatingStars from "./RatingStars";
 
 type TripCardProps = Trip &
 	PressableProps & {
-		onDelete: () => void;
+		onDelete: () => void | Promise<void>;
 	};
 
 export default function TripCard({
