@@ -33,9 +33,17 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 	}, []);
 
 	const value = useMemo<TripsContextValue>(() => {
-		const persistTrips = async (updatedTrips: Trip[]) => {
-			setTrips(updatedTrips);
-			await saveTrips(updatedTrips);
+		const persistTrips = async (getNextTrips: (prevTrips: Trip[]) => Trip[]) => {
+			let nextTrips: Trip[] | undefined;
+
+			setTrips((prevTrips) => {
+				nextTrips = getNextTrips(prevTrips);
+				return nextTrips;
+			});
+
+			if (nextTrips) {
+				await saveTrips(nextTrips);
+			}
 		};
 
 		return {
@@ -47,69 +55,71 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 				) as string[];
 
 				const newTrip = { id, ...data, galleryUris: mergedGalleryUris };
-				const updatedTrips = [...trips, newTrip];
-
-				await persistTrips(updatedTrips);
+				await persistTrips((prevTrips) => [...prevTrips, newTrip]);
 
 				return id;
 			},
 			updateTrip: async (id: string, data: Partial<TripData>) => {
-				const updatedTrips = trips.map((trip) =>
-					trip.id === id ? { ...trip, ...data } : trip,
+				await persistTrips((prevTrips) =>
+					prevTrips.map((trip) => (trip.id === id ? { ...trip, ...data } : trip)),
 				);
-				await persistTrips(updatedTrips);
 			},
 			deleteTrip: async (id: string) => {
-				const updatedTrips = trips.filter((trip) => trip.id !== id);
-				await persistTrips(updatedTrips);
+				await persistTrips((prevTrips) =>
+					prevTrips.filter((trip) => trip.id !== id),
+				);
 			},
 			setMainImage: async (tripId: string, uri: string) => {
-				const updatedTrips = trips.map((trip) =>
-					trip.id === tripId
-						? {
-								...trip,
-								imageUri: uri,
-								galleryUris: Array.from(
-									new Set([uri, ...(trip.galleryUris ?? [])]),
-								),
-							}
-						: trip,
+				await persistTrips((prevTrips) =>
+					prevTrips.map((trip) =>
+						trip.id === tripId
+							? {
+									...trip,
+									imageUri: uri,
+									galleryUris: Array.from(
+										new Set([uri, ...(trip.galleryUris ?? [])]),
+									),
+								}
+							: trip,
+					),
 				);
-				await persistTrips(updatedTrips);
 			},
 			addGalleryImage: async (tripId, uri) => {
-				const updatedTrips = trips.map((trip) =>
-					trip.id === tripId
-						? {
-								...trip,
-								galleryUris: Array.from(
-									new Set([...(trip.galleryUris ?? []), uri]),
-								),
-							}
-						: trip,
+				await persistTrips((prevTrips) =>
+					prevTrips.map((trip) =>
+						trip.id === tripId
+							? {
+									...trip,
+									galleryUris: Array.from(
+										new Set([...(trip.galleryUris ?? []), uri]),
+									),
+								}
+							: trip,
+					),
 				);
-				await persistTrips(updatedTrips);
 			},
 			removeGalleryImage: async (tripId, uri) => {
-				const updatedTrips = trips.map((trip) =>
-					trip.id === tripId
-						? {
-								...trip,
-								galleryUris: (trip.galleryUris ?? []).filter(
-									(itemUri) => itemUri !== uri,
-								),
-							}
-						: trip,
+				await persistTrips((prevTrips) =>
+					prevTrips.map((trip) =>
+						trip.id === tripId
+							? {
+									...trip,
+									galleryUris: (trip.galleryUris ?? []).filter(
+										(itemUri) => itemUri !== uri,
+									),
+								}
+							: trip,
+					),
 				);
-				await persistTrips(updatedTrips);
 			},
 			toggleFavorite: async (tripId: string) => {
-				const updatedTrips = trips.map((trip) =>
-					trip.id === tripId
-						? { ...trip, isFavorite: !trip.isFavorite }
-						: trip,
+				await persistTrips((prevTrips) =>
+					prevTrips.map((trip) =>
+						trip.id === tripId
+							? { ...trip, isFavorite: !trip.isFavorite }
+							: trip,
+					),
 				);
-				await persistTrips(updatedTrips);
 			},
 			getTripById: (id) => trips.find((trip) => trip.id === id),
 		};
