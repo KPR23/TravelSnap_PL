@@ -1,3 +1,4 @@
+import { ErrorView } from "@/components/ErrorView";
 import { UNSPLASH_ACCESS_KEY, UNSPLASH_BASE_URL } from "@/constants/api";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
@@ -21,11 +22,10 @@ export function DestinationCard({ city }: DestinationCardProps) {
 		[],
 	);
 
-	const { data, loading, error, refetch: _refetch } = useFetch<UnsplashResponse>(
+	const { data, loading, error, refetch } = useFetch<UnsplashResponse>(
 		url,
 		requestInit,
 	);
-	void _refetch;
 	const photoUri = data?.results?.[0]?.urls?.regular;
 
 	if (loading) {
@@ -33,7 +33,14 @@ export function DestinationCard({ city }: DestinationCardProps) {
 	}
 
 	if (error || !photoUri) {
-		return null;
+		return (
+			<View style={styles.errorContainer}>
+				<ErrorView
+					message="Nie udało się załadować zdjęcia"
+					onRetry={refetch}
+				/>
+			</View>
+		);
 	}
 
 	return (
@@ -58,6 +65,12 @@ const styles = StyleSheet.create({
 		aspectRatio: 16 / 9,
 		borderRadius: Spacing.md,
 		backgroundColor: Colors.skeleton,
+	},
+	errorContainer: {
+		aspectRatio: 16 / 9,
+		borderRadius: Spacing.md,
+		overflow: "hidden",
+		backgroundColor: Colors.card,
 	},
 	image: {
 		width: "100%",
