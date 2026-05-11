@@ -1,8 +1,10 @@
+import { CountryCard } from "@/components/CountryCard";
 import { DestinationPhoto } from "@/components/DestinationPhoto";
 import RatingStars from "@/components/RatingStars";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
+import { extractCountry } from "@/utils/extractCountry";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -110,6 +112,7 @@ export default function TripDetailScreen() {
 							city={trip.destination}
 							fallbackUri={trip.imageUri}
 						/>
+
 						<Link
 							href={{
 								pathname: "/trip/gallery/[id]",
@@ -130,6 +133,7 @@ export default function TripDetailScreen() {
 								</Text>
 							</Pressable>
 						</Link>
+						<CountryCard countryName={extractCountry(trip.destination)} />
 						<Text style={styles.title}>{trip.title}</Text>
 						<View style={styles.row}>
 							<Ionicons
@@ -197,11 +201,6 @@ const styles = StyleSheet.create({
 		fontSize: 24,
 		fontWeight: "bold",
 		color: Colors.textPrimary,
-	},
-	image: {
-		width: "100%",
-		height: 250,
-		borderRadius: Spacing.sm,
 	},
 	placeholder: {
 		width: "100%",
