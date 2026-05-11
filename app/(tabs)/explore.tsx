@@ -1,22 +1,29 @@
+import { DestinationCard } from "@/components/DestinationCard";
 import ScreenHeader from "@/components/ScreenHeader";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
-import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, View } from "react-native";
+import { POPULAR } from "@/lib/destinations";
+import { FlatList, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ExploreScreen() {
 	return (
 		<SafeAreaView style={styles.container}>
-			<ScreenHeader
-				title="Discover new places"
-				subtitle="Coming soon..."
-				showBadge={false}
-			/>
-
-			<View style={styles.iconContainer}>
-				<Ionicons name="compass" size={64} color={Colors.primary} />
+			<View style={styles.headerContainer}>
+				<ScreenHeader
+					title="Discover new places"
+					subtitle="Popular destinations from Unsplash"
+					showBadge={false}
+				/>
 			</View>
+
+			<FlatList
+				data={POPULAR}
+				keyExtractor={(city) => city}
+				renderItem={({ item }) => <DestinationCard city={item} />}
+				contentContainerStyle={styles.listContent}
+				showsVerticalScrollIndicator={false}
+			/>
 		</SafeAreaView>
 	);
 }
@@ -24,12 +31,13 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		paddingHorizontal: Spacing.lg,
 		backgroundColor: Colors.background,
 	},
-	iconContainer: {
-		alignItems: "center",
-		justifyContent: "center",
-		flex: 1,
+	headerContainer: {
+		paddingHorizontal: Spacing.lg,
+	},
+	listContent: {
+		padding: Spacing.lg,
+		gap: Spacing.lg,
 	},
 });

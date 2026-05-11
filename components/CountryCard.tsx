@@ -15,7 +15,8 @@ export function CountryCard({
 }: CountryCardProps): JSX.Element | null {
 	const URL = `${RESTCOUNTRIES_BASE_URL}/name/${encodeURIComponent(countryName)}`;
 
-	const { data, loading, error } = useFetch<Country[]>(URL);
+	const { data, loading, error, refetch: _refetch } = useFetch<Country[]>(URL);
+	void _refetch;
 
 	if (loading) {
 		return <View style={styles.skeleton} />;

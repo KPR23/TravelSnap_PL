@@ -30,10 +30,12 @@ export function DestinationPhoto({ city, fallbackUri }: DestinationPhotoProps) {
 		}),
 		[],
 	);
-	const { data: photoData, loading: photoLoading } = useFetch<UnsplashResponse>(
-		photoUrl,
-		photoRequestInit,
-	);
+	const {
+		data: photoData,
+		loading: photoLoading,
+		refetch: _refetch,
+	} = useFetch<UnsplashResponse>(photoUrl, photoRequestInit);
+	void _refetch;
 	const heroUri = photoData?.results?.[0]?.urls?.regular ?? fallbackUri;
 	const photoAuthor = photoData?.results?.[0]?.user?.name;
 

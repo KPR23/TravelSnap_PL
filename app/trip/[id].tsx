@@ -1,5 +1,6 @@
 import { CountryCard } from "@/components/CountryCard";
 import { DestinationPhoto } from "@/components/DestinationPhoto";
+import { ErrorView } from "@/components/ErrorView";
 import RatingStars from "@/components/RatingStars";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
@@ -49,14 +50,11 @@ export default function TripDetailScreen() {
 	if (!trip) {
 		return (
 			<SafeAreaView style={styles.container}>
-				<View style={styles.placeholder}>
-					<Ionicons
-						name="alert-circle-outline"
-						size={56}
-						color={Colors.placeholder}
-					/>
-					<Text style={styles.placeholderText}>Nie znaleziono podróży</Text>
-				</View>
+				<ErrorView
+					message="Nie znaleziono podróży"
+					onRetry={() => router.back()}
+					retryLabel="Wróć"
+				/>
 			</SafeAreaView>
 		);
 	}
@@ -112,6 +110,7 @@ export default function TripDetailScreen() {
 							city={trip.destination}
 							fallbackUri={trip.imageUri}
 						/>
+						<CountryCard countryName={extractCountry(trip.destination)} />
 
 						<Link
 							href={{
@@ -133,7 +132,6 @@ export default function TripDetailScreen() {
 								</Text>
 							</Pressable>
 						</Link>
-						<CountryCard countryName={extractCountry(trip.destination)} />
 						<Text style={styles.title}>{trip.title}</Text>
 						<View style={styles.row}>
 							<Ionicons
