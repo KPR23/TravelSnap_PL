@@ -1,3 +1,4 @@
+import { DestinationPhoto } from "@/components/DestinationPhoto";
 import RatingStars from "@/components/RatingStars";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
@@ -6,7 +7,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
 	Alert,
-	Image,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -106,18 +106,10 @@ export default function TripDetailScreen() {
 			>
 				<ScrollView contentContainerStyle={styles.content}>
 					<View style={styles.topSection}>
-						{trip.imageUri ? (
-							<Image source={{ uri: trip.imageUri }} style={styles.image} />
-						) : (
-							<View style={styles.placeholder}>
-								<Ionicons
-									name="image-outline"
-									size={64}
-									color={Colors.placeholder}
-								/>
-								<Text style={styles.placeholderText}>Brak zdjęcia</Text>
-							</View>
-						)}
+						<DestinationPhoto
+							city={trip.destination}
+							fallbackUri={trip.imageUri}
+						/>
 						<Link
 							href={{
 								pathname: "/trip/gallery/[id]",

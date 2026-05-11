@@ -6,7 +6,7 @@ interface FetchState<T> {
 	error: string | null;
 }
 
-export function useFetch<T>(url: string): FetchState<T> {
+export function useFetch<T>(url: string, init?: RequestInit): FetchState<T> {
 	const [data, setData] = useState<T | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -14,7 +14,17 @@ export function useFetch<T>(url: string): FetchState<T> {
 	useEffect(() => {
 		let cancelled = false;
 
-		fetch(url)
+		if (!url) {
+			setData(null);
+			setError(null);
+			setLoading(false);
+			return;
+		}
+
+		setLoading(true);
+		setError(null);
+
+		fetch(url, init)
 			.then((response) =>
 				response.ok
 					? response.json()
@@ -36,7 +46,7 @@ export function useFetch<T>(url: string): FetchState<T> {
 		return () => {
 			cancelled = true;
 		};
-	}, [url]);
+	}, [url, init]);
 
 	return { data, loading, error };
 }
