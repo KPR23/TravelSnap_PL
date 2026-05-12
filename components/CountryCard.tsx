@@ -13,6 +13,8 @@ interface CountryCardProps {
 export function CountryCard({
 	countryName,
 }: CountryCardProps): JSX.Element | null {
+	// Bazowy URL pobieramy z commitowanego `constants/api.ts` (bez sekretow w repo),
+	// a ewentualne klucze trafiaja przez EXPO_PUBLIC_* z lokalnego .env.
 	const URL = `${RESTCOUNTRIES_BASE_URL}/name/${encodeURIComponent(countryName)}`;
 
 	const { data, loading, error, refetch: _refetch } = useFetch<Country[]>(URL);

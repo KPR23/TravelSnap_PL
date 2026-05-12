@@ -4,14 +4,22 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useFetch } from "@/hooks/useFetch";
 import type { UnsplashResponse } from "@/types/unsplash";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
 interface DestinationCardProps {
 	city: string;
+	// Token rośnie przy globalnym refreshu; zmiana wartości uruchamia refetch tej karty.
+	refreshToken?: number;
+	// Callback do rodzica: "skończyłem próbę odświeżenia" (sukces lub błąd).
+	onRefreshSettled?: () => void;
 }
 
-export function DestinationCard({ city }: DestinationCardProps) {
+export function DestinationCard({
+	city,
+	refreshToken = 0,
+	onRefreshSettled,
+}: DestinationCardProps) {
 	const url = `${UNSPLASH_BASE_URL}/search/photos?query=${encodeURIComponent(city)}&per_page=1`;
 	const requestInit = useMemo<RequestInit>(
 		() => ({
@@ -27,6 +35,32 @@ export function DestinationCard({ city }: DestinationCardProps) {
 		requestInit,
 	);
 	const photoUri = data?.results?.[0]?.urls?.regular;
+
+	useEffect(() => {
+		// Pierwszy render ma token 0; nie traktujemy go jako "manual refresh".
+		if (refreshToken === 0) return;
+
+		let isActive = true;
+
+		const refreshCard = async () => {
+			try {
+				await refetch();
+			} finally {
+				// `finally` jest celowe: rodzic musi dostać sygnał zakończenia także przy błędzie,
+				// inaczej globalny spinner mógłby wisieć w nieskończoność.
+				if (isActive) {
+					onRefreshSettled?.();
+				}
+			}
+		};
+
+		void refreshCard();
+
+		return () => {
+			// Ochrona przed wywołaniem callbacku po unmount (np. szybkie przejście na inny ekran).
+			isActive = false;
+		};
+	}, [onRefreshSettled, refetch, refreshToken]);
 
 	if (loading) {
 		return <View style={styles.skeleton} />;
