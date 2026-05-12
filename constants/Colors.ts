@@ -9,4 +9,6 @@ export const Colors = {
 	inputBorder: "#2E4066", // obramowanie inputów
 	border: "#2E3A50", // subtelne linie oddzielające
 	placeholder: "#4A6FA5", // tło placeholderów
+	skeleton: "#243352", // tło skeletonów
+	error: "#E94560", // kolor błędu
 } as const;

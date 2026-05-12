@@ -1,12 +1,15 @@
+import { CountryCard } from "@/components/CountryCard";
+import { DestinationPhoto } from "@/components/DestinationPhoto";
+import { ErrorView } from "@/components/ErrorView";
 import RatingStars from "@/components/RatingStars";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
+import { extractCountry } from "@/utils/extractCountry";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
 	Alert,
-	Image,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -47,14 +50,11 @@ export default function TripDetailScreen() {
 	if (!trip) {
 		return (
 			<SafeAreaView style={styles.container}>
-				<View style={styles.placeholder}>
-					<Ionicons
-						name="alert-circle-outline"
-						size={56}
-						color={Colors.placeholder}
-					/>
-					<Text style={styles.placeholderText}>Nie znaleziono podróży</Text>
-				</View>
+				<ErrorView
+					message="Nie znaleziono podróży"
+					onRetry={() => router.back()}
+					retryLabel="Wróć"
+				/>
 			</SafeAreaView>
 		);
 	}
@@ -106,18 +106,12 @@ export default function TripDetailScreen() {
 			>
 				<ScrollView contentContainerStyle={styles.content}>
 					<View style={styles.topSection}>
-						{trip.imageUri ? (
-							<Image source={{ uri: trip.imageUri }} style={styles.image} />
-						) : (
-							<View style={styles.placeholder}>
-								<Ionicons
-									name="image-outline"
-									size={64}
-									color={Colors.placeholder}
-								/>
-								<Text style={styles.placeholderText}>Brak zdjęcia</Text>
-							</View>
-						)}
+						<DestinationPhoto
+							city={trip.destination}
+							fallbackUri={trip.imageUri}
+						/>
+						<CountryCard countryName={extractCountry(trip.destination)} />
+
 						<Link
 							href={{
 								pathname: "/trip/gallery/[id]",
@@ -205,11 +199,6 @@ const styles = StyleSheet.create({
 		fontSize: 24,
 		fontWeight: "bold",
 		color: Colors.textPrimary,
-	},
-	image: {
-		width: "100%",
-		height: 250,
-		borderRadius: Spacing.sm,
 	},
 	placeholder: {
 		width: "100%",
