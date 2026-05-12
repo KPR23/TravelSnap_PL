@@ -13,7 +13,8 @@ interface FetchState<T> {
 	data: T | null;
 	loading: boolean;
 	error: string | null;
-	refetch: () => void;
+	// Refetch jest asynchroniczny (wykonuje request + zapis cache), wiec zwraca Promise.
+	refetch: () => Promise<void>;
 }
 
 export function useFetch<T>(url: string, init?: RequestInit): FetchState<T> {
@@ -81,12 +82,14 @@ export function useFetch<T>(url: string, init?: RequestInit): FetchState<T> {
 	useEffect(() => {
 		let cancelled = false;
 
-		fetchData(() => cancelled);
+		// Effect nie awaituje Promise; wystarczy odpalic go i pozwolic hookowi zarzadzac stanem.
+		void fetchData(() => cancelled);
 
 		return () => {
 			cancelled = true;
 		};
 	}, [fetchData]);
 
-	return { data, loading, error, refetch: fetchData };
+	// Zwracamy wrapper bez argumentow, aby API hooka bylo jednoznaczne: refetch() => Promise<void>.
+	return { data, loading, error, refetch: () => fetchData() };
 }
