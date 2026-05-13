@@ -11,7 +11,18 @@ export const tripSchema = z.object({
 		.min(3, "Destynacja musi mieć co najmniej 3 znaki")
 		.max(60, "Destynacja może mieć maksymalnie 60 znaków")
 		.trim(),
-	date: z.string().regex(/^\d{4}-\d{2}$/, "Data musi być w formacie YYYY-MM"),
+	date: z
+		.string()
+		.regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Data musi być w formacie YYYY-MM")
+		.refine((date) => {
+			const year = Number(date.slice(0, 4));
+			const currentDate = new Date();
+			const month = Number(date.slice(5, 7));
+
+			return (
+				year <= currentDate.getFullYear() && month <= currentDate.getMonth() + 1
+			);
+		}, "Data nie może być w przyszłości"),
 	rating: z
 		.number({ error: "Ocena musi być liczbą" })
 		.int("Ocena musi być liczbą całkowitą")
