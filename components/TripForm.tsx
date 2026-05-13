@@ -2,13 +2,11 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { handleAddPhoto } from "@/lib/pickImage";
 import { TripFormData, tripSchema } from "@/types/tripSchema";
-import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Image } from "expo-image";
-import { useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
 	ActivityIndicator,
+	Image,
 	Keyboard,
 	KeyboardAvoidingView,
 	Platform,
@@ -21,33 +19,39 @@ import {
 } from "react-native";
 import RatingStars from "./RatingStars";
 
-type AddTripFormProps = {
-	onAddTrip: (data: TripFormData) => Promise<void>;
-};
+interface TripFormProps {
+	defaultValues: TripFormData;
+	onSubmit: (data: TripFormData) => Promise<void>;
+	buttonLabel: string;
+	photoTripId: string;
+}
 
-export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
-	const [imageUri, setImageUri] = useState<string | null>(null);
-	const draftTripId = useRef<string | null>(null);
+export default function TripForm({
+	defaultValues,
+	onSubmit,
+	buttonLabel,
+	photoTripId,
+}: TripFormProps) {
 	const {
 		control,
 		handleSubmit,
+		watch,
+		setValue,
 		reset,
 		formState: { errors, isSubmitting },
 	} = useForm<TripFormData>({
 		resolver: zodResolver(tripSchema),
-		defaultValues: {
-			title: "",
-			destination: "",
-			date: "",
-			rating: 3,
-		},
+		defaultValues,
 		mode: "onBlur",
 	});
 
-	const onSubmit = async (data: TripFormData): Promise<void> => {
-		await onAddTrip({ ...data, imageUri: imageUri ?? undefined });
-		setImageUri(null);
-		reset();
+	const imageUri = watch("imageUri");
+
+	const setImageUri = (uri: string) => {
+		setValue("imageUri", uri, {
+			shouldDirty: true,
+			shouldValidate: true,
+		});
 	};
 
 	return (
@@ -146,9 +150,7 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 						<>
 							<Image source={{ uri: imageUri }} style={styles.image} />
 							<Pressable
-								onPress={() =>
-									handleAddPhoto(draftTripId.toString(), setImageUri)
-								}
+								onPress={() => handleAddPhoto(photoTripId, setImageUri)}
 								style={styles.changeImageButton}
 							>
 								<Text style={styles.imageText}>Zmień zdjęcie</Text>
@@ -156,16 +158,9 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 						</>
 					) : (
 						<Pressable
-							onPress={() =>
-								handleAddPhoto(draftTripId.current ?? "", setImageUri)
-							}
+							onPress={() => handleAddPhoto(photoTripId, setImageUri)}
 							style={styles.imageButton}
 						>
-							<Ionicons
-								name="camera-outline"
-								size={24}
-								color={Colors.textPrimary}
-							/>
 							<Text style={styles.imageText}>Dodaj zdjęcie</Text>
 						</Pressable>
 					)}
@@ -178,7 +173,7 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 					{isSubmitting ? (
 						<ActivityIndicator color={Colors.background} />
 					) : (
-						<Text style={styles.submitBtnText}>Dodaj podróż</Text>
+						<Text style={styles.submitBtnText}>{buttonLabel}</Text>
 					)}
 				</Pressable>
 			</KeyboardAvoidingView>
