@@ -15,12 +15,14 @@ export const tripSchema = z.object({
 		.string()
 		.regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Data musi być w formacie YYYY-MM")
 		.refine((date) => {
-			const year = Number(date.slice(0, 4));
 			const currentDate = new Date();
+			const year = Number(date.slice(0, 4));
 			const month = Number(date.slice(5, 7));
 
 			return (
-				year <= currentDate.getFullYear() && month <= currentDate.getMonth() + 1
+				year < currentDate.getFullYear() ||
+				(year === currentDate.getFullYear() &&
+					month <= currentDate.getMonth() + 1)
 			);
 		}, "Data nie może być w przyszłości"),
 	rating: z
