@@ -5,10 +5,12 @@ import { useTrips } from "@/context/TripsContext";
 import { handlePickPhoto } from "@/lib/pickImage";
 import { TripFormData, tripSchema } from "@/types/tripSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo } from "react";
+import { useNavigation } from "expo-router";
+import { useEffect, useMemo, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
 	ActivityIndicator,
+	Alert,
 	Image,
 	Keyboard,
 	KeyboardAvoidingView,
@@ -51,6 +53,8 @@ export default function TripForm({
 			trips.filter((t) => t.id !== tripId).map((t) => t.title.toLowerCase()),
 		[trips, tripId],
 	);
+	const navigation = useNavigation();
+	const submittedRef = useRef(false);
 
 	const schema = useMemo(
 		() =>
@@ -71,12 +75,28 @@ export default function TripForm({
 		handleSubmit,
 		watch,
 		setValue,
-		formState: { isSubmitting },
+		formState: { isSubmitting, isDirty },
 	} = useForm<TripFormData>({
 		resolver: zodResolver(schema),
 		defaultValues,
 		mode: "onBlur",
 	});
+
+	useEffect(() => {
+		const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+			if (!isDirty || submittedRef.current) return;
+			e.preventDefault();
+			Alert.alert("Odrzucić zmiany?", "Masz niezapisane zmiany. Odrzucić je?", [
+				{ text: "Zostań", style: "cancel" },
+				{
+					text: "Odrzuć",
+					style: "destructive",
+					onPress: () => navigation.dispatch(e.data.action),
+				},
+			]);
+		});
+		return unsubscribe;
+	}, [navigation, isDirty]);
 
 	const imageUri = watch("imageUri");
 
@@ -85,6 +105,17 @@ export default function TripForm({
 			shouldDirty: true,
 			shouldValidate: true,
 		});
+	};
+
+	const handleValidSubmit = async (data: TripFormData) => {
+		submittedRef.current = true;
+
+		try {
+			await onSubmit(data);
+		} catch (error) {
+			submittedRef.current = false;
+			throw error;
+		}
 	};
 
 	return (
@@ -212,7 +243,7 @@ export default function TripForm({
 					)}
 				</View>
 				<Pressable
-					onPress={handleSubmit(onSubmit)}
+					onPress={handleSubmit(handleValidSubmit)}
 					disabled={isSubmitting}
 					style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
 				>
