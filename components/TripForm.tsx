@@ -100,14 +100,27 @@ export default function TripForm({
 						render={({ field: { onChange, onBlur, value }, fieldState }) => (
 							<View style={styles.field}>
 								<Text style={styles.label}>Tytuł</Text>
-								<TextInput
-									placeholder="np. Wycieczka do Paryża"
-									placeholderTextColor={Colors.textSecondary}
-									style={[styles.input, fieldState.error && styles.inputError]}
-									value={value}
-									onChangeText={onChange}
-									onBlur={onBlur}
-								/>
+								<View style={styles.inputWrapper}>
+									<TextInput
+										placeholder="np. Wycieczka do Paryża"
+										placeholderTextColor={Colors.textSecondary}
+										style={[
+											styles.input,
+											styles.inputWithSpinner,
+											fieldState.error && styles.inputError,
+										]}
+										value={value}
+										onChangeText={onChange}
+										onBlur={onBlur}
+									/>
+									{fieldState.isValidating && (
+										<ActivityIndicator
+											color={Colors.textSecondary}
+											size="small"
+											style={styles.validationSpinner}
+										/>
+									)}
+								</View>
 								{fieldState.error && (
 									<Text style={styles.errorText}>
 										{fieldState.error.message}
@@ -258,6 +271,9 @@ const styles = StyleSheet.create({
 		marginBottom: 6,
 		fontWeight: "500",
 	},
+	inputWrapper: {
+		position: "relative",
+	},
 	input: {
 		borderWidth: 1,
 		borderColor: Colors.inputBorder,
@@ -267,6 +283,15 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		color: Colors.textPrimary,
 		backgroundColor: Colors.inputBg,
+	},
+	inputWithSpinner: {
+		paddingRight: 40,
+	},
+	validationSpinner: {
+		position: "absolute",
+		right: 12,
+		top: 0,
+		bottom: 0,
 	},
 	inputError: {
 		borderColor: Colors.accent,
