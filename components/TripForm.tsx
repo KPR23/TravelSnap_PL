@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/Colors";
+import { MONTH_LENGTH, YEAR_LENGTH } from "@/constants/Constants";
 import { Spacing } from "@/constants/Spacing";
-import { handleAddPhoto } from "@/lib/pickImage";
+import { handlePickPhoto } from "@/lib/pickImage";
 import { TripFormData, tripSchema } from "@/types/tripSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -19,26 +20,33 @@ import {
 } from "react-native";
 import RatingStars from "./RatingStars";
 
+const formatDateInput = (text: string): string => {
+	const digits = text.replace(/\D/g, "").slice(0, YEAR_LENGTH + MONTH_LENGTH);
+
+	if (digits.length <= YEAR_LENGTH) {
+		return digits;
+	}
+
+	return `${digits.slice(0, YEAR_LENGTH)}-${digits.slice(YEAR_LENGTH)}`;
+};
+
 interface TripFormProps {
 	defaultValues: TripFormData;
 	onSubmit: (data: TripFormData) => Promise<void>;
 	buttonLabel: string;
-	photoTripId: string;
 }
 
 export default function TripForm({
 	defaultValues,
 	onSubmit,
 	buttonLabel,
-	photoTripId,
 }: TripFormProps) {
 	const {
 		control,
 		handleSubmit,
 		watch,
 		setValue,
-		reset,
-		formState: { errors, isSubmitting },
+		formState: { isSubmitting },
 	} = useForm<TripFormData>({
 		resolver: zodResolver(tripSchema),
 		defaultValues,
@@ -114,7 +122,7 @@ export default function TripForm({
 								<TextInput
 									style={[styles.input, fieldState.error && styles.inputError]}
 									value={value}
-									onChangeText={onChange}
+									onChangeText={(text) => onChange(formatDateInput(text))}
 									onBlur={onBlur}
 									keyboardType="numeric"
 									placeholder="YYYY-MM"
@@ -150,7 +158,7 @@ export default function TripForm({
 						<>
 							<Image source={{ uri: imageUri }} style={styles.image} />
 							<Pressable
-								onPress={() => handleAddPhoto(photoTripId, setImageUri)}
+								onPress={() => handlePickPhoto(setImageUri)}
 								style={styles.changeImageButton}
 							>
 								<Text style={styles.imageText}>Zmień zdjęcie</Text>
@@ -158,7 +166,7 @@ export default function TripForm({
 						</>
 					) : (
 						<Pressable
-							onPress={() => handleAddPhoto(photoTripId, setImageUri)}
+							onPress={() => handlePickPhoto(setImageUri)}
 							style={styles.imageButton}
 						>
 							<Text style={styles.imageText}>Dodaj zdjęcie</Text>
