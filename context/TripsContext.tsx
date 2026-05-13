@@ -1,13 +1,13 @@
 import { Colors } from "@/constants/Colors";
-import type { Trip, TripData } from "@/types/trip";
+import type { Trip, TripFormData } from "@/types/tripSchema";
 import { loadTrips, saveTrips } from "@/utils/tripStorage";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 type TripsContextValue = {
 	trips: Trip[];
-	addTrip: (data: TripData) => Promise<string>;
-	updateTrip: (id: string, data: Partial<TripData>) => Promise<void>;
+	addTrip: (data: TripFormData) => Promise<string>;
+	updateTrip: (id: string, data: Partial<TripFormData>) => Promise<void>;
 	deleteTrip: (id: string) => Promise<void>;
 	addGalleryImage: (tripId: string, uri: string) => Promise<void>;
 	removeGalleryImage: (tripId: string, uri: string) => Promise<void>;
@@ -33,7 +33,9 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 	}, []);
 
 	const value = useMemo<TripsContextValue>(() => {
-		const persistTrips = async (getNextTrips: (prevTrips: Trip[]) => Trip[]) => {
+		const persistTrips = async (
+			getNextTrips: (prevTrips: Trip[]) => Trip[],
+		) => {
 			let nextTrips: Trip[] | undefined;
 
 			setTrips((prevTrips) => {
@@ -48,7 +50,7 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 
 		return {
 			trips,
-			addTrip: async (data: TripData) => {
+			addTrip: async (data: TripFormData) => {
 				const id = Date.now().toString();
 				const mergedGalleryUris = Array.from(
 					new Set([data.imageUri, ...(data.galleryUris ?? [])].filter(Boolean)),
@@ -59,9 +61,11 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 
 				return id;
 			},
-			updateTrip: async (id: string, data: Partial<TripData>) => {
+			updateTrip: async (id: string, data: Partial<TripFormData>) => {
 				await persistTrips((prevTrips) =>
-					prevTrips.map((trip) => (trip.id === id ? { ...trip, ...data } : trip)),
+					prevTrips.map((trip) =>
+						trip.id === id ? { ...trip, ...data } : trip,
+					),
 				);
 			},
 			deleteTrip: async (id: string) => {

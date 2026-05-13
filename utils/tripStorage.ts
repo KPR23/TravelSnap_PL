@@ -1,4 +1,4 @@
-import { Trip } from "@/types/trip";
+import { Trip } from "@/types/tripSchema";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "travelsnap_trips";

@@ -1,4 +1,4 @@
-import type { Trip } from "@/types/trip";
+import type { Trip } from "@/types/tripSchema";
 
 export function getTripStats(trips: Trip[]) {
 	const tripCount = trips.length;

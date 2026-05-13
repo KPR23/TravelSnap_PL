@@ -2,7 +2,7 @@ import { Colors } from "@/constants/Colors";
 import { MONTH_LENGTH, YEAR_LENGTH } from "@/constants/Constants";
 import { Spacing } from "@/constants/Spacing";
 import { handleAddPhoto } from "@/lib/pickImage";
-import type { TripData } from "@/types/trip";
+import type { TripFormData } from "@/types/tripSchema";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
@@ -20,7 +20,7 @@ import {
 } from "react-native";
 
 type AddTripFormProps = {
-	onAddTrip: (data: TripData) => Promise<void>;
+	onAddTrip: (data: TripFormData) => Promise<void>;
 };
 
 export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
