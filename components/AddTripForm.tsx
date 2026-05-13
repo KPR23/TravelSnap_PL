@@ -195,18 +195,6 @@ const styles = StyleSheet.create({
 	formFields: {
 		gap: Spacing.sm,
 	},
-	button: {
-		backgroundColor: Colors.accent,
-		paddingVertical: Spacing.sm + Spacing.xs,
-		alignItems: "center",
-		justifyContent: "center",
-		borderRadius: Spacing.md,
-		marginTop: "auto",
-	},
-	buttonText: {
-		color: Colors.textPrimary,
-		fontSize: 16,
-	},
 	imageContainer: {
 		alignItems: "center",
 		justifyContent: "center",
