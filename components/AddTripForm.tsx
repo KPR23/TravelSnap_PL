@@ -20,6 +20,7 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 			}}
 			onSubmit={onSubmit}
 			buttonLabel="Dodaj podróż"
+			isWizard
 		/>
 	);
 }

@@ -6,7 +6,7 @@ import { handlePickPhoto } from "@/lib/pickImage";
 import { TripFormData, tripSchema } from "@/types/tripSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "expo-router";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
 	ActivityIndicator,
@@ -39,6 +39,7 @@ interface TripFormProps {
 	onSubmit: (data: TripFormData) => Promise<void>;
 	buttonLabel: string;
 	tripId?: string;
+	isWizard?: boolean;
 }
 
 export default function TripForm({
@@ -46,7 +47,10 @@ export default function TripForm({
 	onSubmit,
 	buttonLabel,
 	tripId,
+	isWizard = false,
 }: TripFormProps) {
+	const [step, setStep] = useState<1 | 2 | 3>(1);
+
 	const { trips } = useTrips();
 	const existingTitles = useMemo(
 		() =>
@@ -75,6 +79,7 @@ export default function TripForm({
 		handleSubmit,
 		watch,
 		setValue,
+		trigger,
 		formState: { isSubmitting, isDirty },
 	} = useForm<TripFormData>({
 		resolver: zodResolver(schema),
@@ -99,12 +104,28 @@ export default function TripForm({
 	}, [navigation, isDirty]);
 
 	const imageUri = watch("imageUri");
+	const showAllFields = !isWizard;
+	const showTripDetailsFields = showAllFields || step === 1;
+	const showRatingFields = showAllFields || step === 2;
+	const showImageField = showAllFields || step === 3;
 
 	const setImageUri = (uri: string) => {
 		setValue("imageUri", uri, {
 			shouldDirty: true,
 			shouldValidate: true,
 		});
+	};
+
+	const goNext = async () => {
+		const fields =
+			step === 1
+				? (["title", "destination"] as const)
+				: step === 2
+					? (["date", "rating"] as const)
+					: ([] as const);
+
+		const ok = await trigger(fields);
+		if (ok) setStep((s) => (s + 1) as 1 | 2 | 3);
 	};
 
 	const handleValidSubmit = async (data: TripFormData) => {
@@ -117,6 +138,9 @@ export default function TripForm({
 			throw error;
 		}
 	};
+	const submitHandler = handleSubmit(handleValidSubmit);
+	const primaryButtonLabel = isWizard && step !== 3 ? "Dalej" : buttonLabel;
+	const handlePrimaryPress = isWizard && step !== 3 ? goNext : submitHandler;
 
 	return (
 		<TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -125,132 +149,160 @@ export default function TripForm({
 				behavior={Platform.OS === "ios" ? "padding" : "height"}
 			>
 				<View style={styles.formFields}>
-					<Controller
-						name="title"
-						control={control}
-						render={({ field: { onChange, onBlur, value }, fieldState }) => (
-							<View style={styles.field}>
-								<Text style={styles.label}>Tytuł</Text>
-								<View style={styles.inputWrapper}>
-									<TextInput
-										placeholder="np. Wycieczka do Paryża"
-										placeholderTextColor={Colors.textSecondary}
-										style={[
-											styles.input,
-											styles.inputWithSpinner,
-											fieldState.error && styles.inputError,
-										]}
-										value={value}
-										onChangeText={onChange}
-										onBlur={onBlur}
-									/>
-									{fieldState.isValidating && (
-										<ActivityIndicator
-											color={Colors.textSecondary}
-											size="small"
-											style={styles.validationSpinner}
-										/>
-									)}
-								</View>
-								{fieldState.error && (
-									<Text style={styles.errorText}>
-										{fieldState.error.message}
-									</Text>
-								)}
-							</View>
-						)}
-					/>
-					<Controller
-						name="destination"
-						control={control}
-						render={({ field: { onChange, onBlur, value }, fieldState }) => (
-							<View style={styles.field}>
-								<Text style={styles.label}>Destynacja</Text>
-								<TextInput
-									placeholder="Destynacja"
-									placeholderTextColor={Colors.textSecondary}
-									style={[styles.input, fieldState.error && styles.inputError]}
-									value={value}
-									onChangeText={onChange}
-									onBlur={onBlur}
-								/>
-								{fieldState.error && (
-									<Text style={styles.errorText}>
-										{fieldState.error.message}
-									</Text>
-								)}
-							</View>
-						)}
-					/>
-					<Controller
-						name="date"
-						control={control}
-						render={({ field: { onChange, onBlur, value }, fieldState }) => (
-							<View style={styles.field}>
-								<Text style={styles.label}>Data</Text>
-								<TextInput
-									style={[styles.input, fieldState.error && styles.inputError]}
-									value={value}
-									onChangeText={(text) => onChange(formatDateInput(text))}
-									onBlur={onBlur}
-									keyboardType="numeric"
-									placeholder="YYYY-MM"
-									placeholderTextColor={Colors.textSecondary}
-									maxLength={7}
-								/>
-								{fieldState.error && (
-									<Text style={styles.errorText}>
-										{fieldState.error.message}
-									</Text>
-								)}
-							</View>
-						)}
-					/>
-					<Controller
-						name="rating"
-						control={control}
-						render={({ field: { value, onChange }, fieldState }) => (
-							<View style={styles.field}>
-								<Text style={styles.label}>Ocena</Text>
-								<RatingStars rating={value} onChange={onChange} />
-								{fieldState.error && (
-									<Text style={styles.errorText}>
-										{fieldState.error.message}
-									</Text>
-								)}
-							</View>
-						)}
-					/>
-				</View>
-				<View style={styles.imageContainer}>
-					{imageUri ? (
+					{showTripDetailsFields && (
 						<>
-							<Image source={{ uri: imageUri }} style={styles.image} />
-							<Pressable
-								onPress={() => handlePickPhoto(setImageUri)}
-								style={styles.changeImageButton}
-							>
-								<Text style={styles.imageText}>Zmień zdjęcie</Text>
-							</Pressable>
+							<Controller
+								name="title"
+								control={control}
+								render={({
+									field: { onChange, onBlur, value },
+									fieldState,
+								}) => (
+									<View style={styles.field}>
+										<Text style={styles.label}>Tytuł</Text>
+										<View style={styles.inputWrapper}>
+											<TextInput
+												placeholder="np. Wycieczka do Paryża"
+												placeholderTextColor={Colors.textSecondary}
+												style={[
+													styles.input,
+													styles.inputWithSpinner,
+													fieldState.error && styles.inputError,
+												]}
+												value={value}
+												onChangeText={onChange}
+												onBlur={onBlur}
+											/>
+											{fieldState.isValidating && (
+												<ActivityIndicator
+													color={Colors.textSecondary}
+													size="small"
+													style={styles.validationSpinner}
+												/>
+											)}
+										</View>
+										{fieldState.error && (
+											<Text style={styles.errorText}>
+												{fieldState.error.message}
+											</Text>
+										)}
+									</View>
+								)}
+							/>
+
+							<Controller
+								name="destination"
+								control={control}
+								render={({
+									field: { onChange, onBlur, value },
+									fieldState,
+								}) => (
+									<View style={styles.field}>
+										<Text style={styles.label}>Destynacja</Text>
+										<TextInput
+											placeholder="Destynacja"
+											placeholderTextColor={Colors.textSecondary}
+											style={[
+												styles.input,
+												fieldState.error && styles.inputError,
+											]}
+											value={value}
+											onChangeText={onChange}
+											onBlur={onBlur}
+										/>
+										{fieldState.error && (
+											<Text style={styles.errorText}>
+												{fieldState.error.message}
+											</Text>
+										)}
+									</View>
+								)}
+							/>
 						</>
-					) : (
-						<Pressable
-							onPress={() => handlePickPhoto(setImageUri)}
-							style={styles.imageButton}
-						>
-							<Text style={styles.imageText}>Dodaj zdjęcie</Text>
-						</Pressable>
+					)}
+					{showRatingFields && (
+						<>
+							<Controller
+								name="date"
+								control={control}
+								render={({
+									field: { onChange, onBlur, value },
+									fieldState,
+								}) => (
+									<View style={styles.field}>
+										<Text style={styles.label}>Data</Text>
+										<TextInput
+											style={[
+												styles.input,
+												fieldState.error && styles.inputError,
+											]}
+											value={value}
+											onChangeText={(text) => onChange(formatDateInput(text))}
+											onBlur={onBlur}
+											keyboardType="numeric"
+											placeholder="YYYY-MM"
+											placeholderTextColor={Colors.textSecondary}
+											maxLength={7}
+										/>
+										{fieldState.error && (
+											<Text style={styles.errorText}>
+												{fieldState.error.message}
+											</Text>
+										)}
+									</View>
+								)}
+							/>
+							<Controller
+								name="rating"
+								control={control}
+								render={({ field: { value, onChange }, fieldState }) => (
+									<View style={styles.field}>
+										<Text style={styles.label}>Ocena</Text>
+										<RatingStars rating={value} onChange={onChange} />
+										{fieldState.error && (
+											<Text style={styles.errorText}>
+												{fieldState.error.message}
+											</Text>
+										)}
+									</View>
+								)}
+							/>
+						</>
 					)}
 				</View>
+				{showImageField && (
+					<>
+						<View style={styles.imageContainer}>
+							{imageUri ? (
+								<>
+									<Image source={{ uri: imageUri }} style={styles.image} />
+									<Pressable
+										onPress={() => handlePickPhoto(setImageUri)}
+										style={styles.changeImageButton}
+									>
+										<Text style={styles.imageText}>Zmień zdjęcie</Text>
+									</Pressable>
+								</>
+							) : (
+								<Pressable
+									onPress={() => handlePickPhoto(setImageUri)}
+									style={styles.imageButton}
+								>
+									<Text style={styles.imageText}>Dodaj zdjęcie</Text>
+								</Pressable>
+							)}
+						</View>
+					</>
+				)}
 				<Pressable
-					onPress={handleSubmit(handleValidSubmit)}
+					onPress={handlePrimaryPress}
 					disabled={isSubmitting}
 					style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
 				>
 					{isSubmitting ? (
 						<ActivityIndicator color={Colors.background} />
 					) : (
-						<Text style={styles.submitBtnText}>{buttonLabel}</Text>
+						<Text style={styles.submitBtnText}>{primaryButtonLabel}</Text>
 					)}
 				</Pressable>
 			</KeyboardAvoidingView>
