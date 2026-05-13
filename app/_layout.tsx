@@ -10,6 +10,7 @@ export default function RootLayout() {
 			<Stack
 				screenOptions={{
 					headerShown: false,
+					headerBackButtonMenuEnabled: false,
 					headerStyle: {
 						backgroundColor: Colors.background,
 					},

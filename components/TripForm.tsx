@@ -5,8 +5,9 @@ import { useTrips } from "@/context/TripsContext";
 import { handlePickPhoto } from "@/lib/pickImage";
 import { TripFormData, tripSchema } from "@/types/tripSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { usePreventRemove } from "@react-navigation/native";
 import { useNavigation } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
 	ActivityIndicator,
@@ -92,21 +93,16 @@ export default function TripForm({
 		mode: "onBlur",
 	});
 
-	useEffect(() => {
-		const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-			if (!isDirty || submittedRef.current) return;
-			e.preventDefault();
-			Alert.alert("Odrzucić zmiany?", "Masz niezapisane zmiany. Odrzucić je?", [
-				{ text: "Zostań", style: "cancel" },
-				{
-					text: "Odrzuć",
-					style: "destructive",
-					onPress: () => navigation.dispatch(e.data.action),
-				},
-			]);
-		});
-		return unsubscribe;
-	}, [navigation, isDirty]);
+	usePreventRemove(isDirty && !submittedRef.current && !isSubmitting, ({ data }) => {
+		Alert.alert("Odrzucić zmiany?", "Masz niezapisane zmiany. Odrzucić je?", [
+			{ text: "Zostań", style: "cancel" },
+			{
+				text: "Odrzuć",
+				style: "destructive",
+				onPress: () => navigation.dispatch(data.action),
+			},
+		]);
+	});
 
 	const imageUri = watch("imageUri");
 	const showAllFields = !isWizard;
