@@ -13,11 +13,11 @@ export const tripSchema = z.object({
 		.trim(),
 	date: z.string().regex(/^\d{4}-\d{2}$/, "Data musi być w formacie YYYY-MM"),
 	rating: z
-		.number({ message: "Ocena musi być liczbą" })
+		.number({ error: "Ocena musi być liczbą" })
 		.int("Ocena musi być liczbą całkowitą")
 		.min(1, "Ocena musi być między 1 a 5")
 		.max(5, "Ocena musi być między 1 a 5"),
-	imageUri: z.url().optional(),
+	imageUri: z.string().optional(),
 	galleryUris: z.array(z.string()).optional(),
 	isFavorite: z.boolean().optional(),
 });
