@@ -1,9 +1,11 @@
 import { Colors } from "@/constants/Colors";
 import { MONTH_LENGTH, YEAR_LENGTH } from "@/constants/Constants";
 import { Spacing } from "@/constants/Spacing";
+import { useTrips } from "@/context/TripsContext";
 import { handlePickPhoto } from "@/lib/pickImage";
 import { TripFormData, tripSchema } from "@/types/tripSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
 	ActivityIndicator,
@@ -34,13 +36,36 @@ interface TripFormProps {
 	defaultValues: TripFormData;
 	onSubmit: (data: TripFormData) => Promise<void>;
 	buttonLabel: string;
+	tripId?: string;
 }
 
 export default function TripForm({
 	defaultValues,
 	onSubmit,
 	buttonLabel,
+	tripId,
 }: TripFormProps) {
+	const { trips } = useTrips();
+	const existingTitles = useMemo(
+		() =>
+			trips.filter((t) => t.id !== tripId).map((t) => t.title.toLowerCase()),
+		[trips, tripId],
+	);
+
+	const schema = useMemo(
+		() =>
+			tripSchema.extend({
+				title: tripSchema.shape.title.refine(
+					async (val) => {
+						await new Promise((r) => setTimeout(r, 150));
+						return !existingTitles.includes(val.toLowerCase());
+					},
+					{ message: "Tytuł już istnieje — wybierz inny" },
+				),
+			}),
+		[existingTitles],
+	);
+
 	const {
 		control,
 		handleSubmit,
@@ -48,7 +73,7 @@ export default function TripForm({
 		setValue,
 		formState: { isSubmitting },
 	} = useForm<TripFormData>({
-		resolver: zodResolver(tripSchema),
+		resolver: zodResolver(schema),
 		defaultValues,
 		mode: "onBlur",
 	});

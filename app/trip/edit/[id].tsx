@@ -37,6 +37,7 @@ export default function EditTripScreen() {
 				defaultValues={trip}
 				onSubmit={onSubmit}
 				buttonLabel="Zapisz zmiany"
+				tripId={trip.id}
 			/>
 		</SafeAreaView>
 	);
