@@ -1,13 +1,14 @@
 import { Colors } from "@/constants/Colors";
-import { MONTH_LENGTH, YEAR_LENGTH } from "@/constants/Constants";
 import { Spacing } from "@/constants/Spacing";
 import { handleAddPhoto } from "@/lib/pickImage";
-import type { TripFormData } from "@/types/tripSchema";
+import { TripFormData, tripSchema } from "@/types/tripSchema";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Image } from "expo-image";
+import { useRef, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
-	Alert,
-	Image,
+	ActivityIndicator,
 	Keyboard,
 	KeyboardAvoidingView,
 	Platform,
@@ -18,79 +19,35 @@ import {
 	TouchableWithoutFeedback,
 	View,
 } from "react-native";
+import RatingStars from "./RatingStars";
 
 type AddTripFormProps = {
 	onAddTrip: (data: TripFormData) => Promise<void>;
 };
 
 export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
-	const [title, setTitle] = useState("");
-	const [destination, setDestination] = useState("");
-	const [dateDigits, setDateDigits] = useState("");
-	const [rating, setRating] = useState("");
-	const [imageUri, setImageUri] = useState<string>();
-	const [draftTripId] = useState(() => Date.now().toString());
+	const [imageUri, setImageUri] = useState<string | null>(null);
+	const draftTripId = useRef<string | null>(null);
+	const {
+		control,
+		handleSubmit,
+		reset,
+		formState: { errors, isSubmitting },
+	} = useForm<TripFormData>({
+		resolver: zodResolver(tripSchema),
+		defaultValues: {
+			title: "",
+			destination: "",
+			date: "",
+			rating: 3,
+		},
+		mode: "onBlur",
+	});
 
-	const date =
-		dateDigits.length <= YEAR_LENGTH
-			? dateDigits
-			: `${dateDigits.slice(0, YEAR_LENGTH)}-${dateDigits.slice(YEAR_LENGTH, YEAR_LENGTH + MONTH_LENGTH)}`;
-
-	const handleDateChange = (text: string): void => {
-		setDateDigits(text.replace(/\D/g, "").slice(0, YEAR_LENGTH + MONTH_LENGTH));
-	};
-
-	const validateRating = (rating: string): boolean => {
-		const number = Number(rating);
-		return number >= 1 && number <= 5;
-	};
-
-	const validateDate = (date: string): boolean => {
-		const monthStr = date.slice(
-			YEAR_LENGTH + 1,
-			YEAR_LENGTH + 1 + MONTH_LENGTH,
-		);
-		const month = Number(monthStr);
-		return (
-			date.length === YEAR_LENGTH + 1 + MONTH_LENGTH &&
-			date[YEAR_LENGTH] === "-" &&
-			month >= 1 &&
-			month <= 12 &&
-			Number(date.slice(0, YEAR_LENGTH)) <= new Date().getFullYear()
-		);
-	};
-
-	const handleAddTrip = async (): Promise<void> => {
-		Keyboard.dismiss();
-
-		if (!title || !destination || !dateDigits || !rating) {
-			Alert.alert("Wypełnij wszystkie pola");
-			return;
-		}
-
-		const isRatingValid = validateRating(rating);
-		if (!isRatingValid) {
-			Alert.alert("Zła ocena", "Ocena musi być między 1 a 5");
-			return;
-		}
-
-		const isDateValid = validateDate(date);
-		if (!isDateValid) {
-			Alert.alert("Zła data", "Format: YYYY-MM (np. 2026-03)");
-			return;
-		}
-
-		await onAddTrip({
-			title,
-			destination,
-			date,
-			rating: Number(rating),
-			imageUri,
-		});
-		setTitle("");
-		setDestination("");
-		setDateDigits("");
-		setRating("");
+	const onSubmit = async (data: TripFormData): Promise<void> => {
+		await onAddTrip({ ...data, imageUri: imageUri ?? undefined });
+		setImageUri(null);
+		reset();
 	};
 
 	return (
@@ -100,36 +57,88 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 				behavior={Platform.OS === "ios" ? "padding" : "height"}
 			>
 				<View style={styles.formFields}>
-					<TextInput
-						placeholder="Tytuł"
-						placeholderTextColor={Colors.textSecondary}
-						style={styles.input}
-						value={title}
-						onChangeText={setTitle}
+					<Controller
+						name="title"
+						control={control}
+						render={({ field: { onChange, onBlur, value }, fieldState }) => (
+							<View style={styles.field}>
+								<Text style={styles.label}>Tytuł</Text>
+								<TextInput
+									placeholder="np. Wycieczka do Paryża"
+									placeholderTextColor={Colors.textSecondary}
+									style={[styles.input, fieldState.error && styles.inputError]}
+									value={value}
+									onChangeText={onChange}
+									onBlur={onBlur}
+								/>
+								{fieldState.error && (
+									<Text style={styles.errorText}>
+										{fieldState.error.message}
+									</Text>
+								)}
+							</View>
+						)}
 					/>
-					<TextInput
-						placeholder="Destynacja"
-						placeholderTextColor={Colors.textSecondary}
-						style={styles.input}
-						value={destination}
-						onChangeText={setDestination}
+					<Controller
+						name="destination"
+						control={control}
+						render={({ field: { onChange, onBlur, value }, fieldState }) => (
+							<View style={styles.field}>
+								<Text style={styles.label}>Destynacja</Text>
+								<TextInput
+									placeholder="Destynacja"
+									placeholderTextColor={Colors.textSecondary}
+									style={[styles.input, fieldState.error && styles.inputError]}
+									value={value}
+									onChangeText={onChange}
+									onBlur={onBlur}
+								/>
+								{fieldState.error && (
+									<Text style={styles.errorText}>
+										{fieldState.error.message}
+									</Text>
+								)}
+							</View>
+						)}
 					/>
-					<TextInput
-						style={styles.input}
-						value={date}
-						onChangeText={handleDateChange}
-						keyboardType="numeric"
-						placeholder="YYYY-MM"
-						placeholderTextColor={Colors.textSecondary}
-						maxLength={7}
+					<Controller
+						name="date"
+						control={control}
+						render={({ field: { onChange, onBlur, value }, fieldState }) => (
+							<View style={styles.field}>
+								<Text style={styles.label}>Data</Text>
+								<TextInput
+									style={[styles.input, fieldState.error && styles.inputError]}
+									value={value}
+									onChangeText={onChange}
+									onBlur={onBlur}
+									keyboardType="numeric"
+									placeholder="YYYY-MM"
+									placeholderTextColor={Colors.textSecondary}
+									maxLength={7}
+								/>
+								{fieldState.error && (
+									<Text style={styles.errorText}>
+										{fieldState.error.message}
+									</Text>
+								)}
+							</View>
+						)}
 					/>
-					<TextInput
-						placeholder="Ocena (1-5)"
-						placeholderTextColor={Colors.textSecondary}
-						style={styles.input}
-						onChangeText={(text) => setRating(text)}
-						value={rating}
-						keyboardType="numeric"
+					<Controller
+						name="rating"
+						control={control}
+						render={({ field: { value, onChange }, fieldState }) => (
+							<View style={styles.field}>
+								<Text style={styles.label}>Ocena</Text>
+								<RatingStars rating={value} onChange={onChange} />
+								{fieldState.error && (
+									<Text style={styles.errorText}>
+										{fieldState.error.message}
+									</Text>
+								)}
+							</View>
+						)}
 					/>
 				</View>
 				<View style={styles.imageContainer}>
@@ -137,7 +146,9 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 						<>
 							<Image source={{ uri: imageUri }} style={styles.image} />
 							<Pressable
-								onPress={() => handleAddPhoto(draftTripId, setImageUri)}
+								onPress={() =>
+									handleAddPhoto(draftTripId.toString(), setImageUri)
+								}
 								style={styles.changeImageButton}
 							>
 								<Text style={styles.imageText}>Zmień zdjęcie</Text>
@@ -145,7 +156,9 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 						</>
 					) : (
 						<Pressable
-							onPress={() => handleAddPhoto(draftTripId, setImageUri)}
+							onPress={() =>
+								handleAddPhoto(draftTripId.toString(), setImageUri)
+							}
 							style={styles.imageButton}
 						>
 							<Ionicons
@@ -157,8 +170,16 @@ export default function AddTripForm({ onAddTrip }: AddTripFormProps) {
 						</Pressable>
 					)}
 				</View>
-				<Pressable onPress={handleAddTrip} style={styles.button}>
-					<Text style={styles.buttonText}>Dodaj</Text>
+				<Pressable
+					onPress={handleSubmit(onSubmit)}
+					disabled={isSubmitting}
+					style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
+				>
+					{isSubmitting ? (
+						<ActivityIndicator color={Colors.background} />
+					) : (
+						<Text style={styles.submitBtnText}>Dodaj podróż</Text>
+					)}
 				</Pressable>
 			</KeyboardAvoidingView>
 		</TouchableWithoutFeedback>
@@ -173,14 +194,6 @@ const styles = StyleSheet.create({
 	},
 	formFields: {
 		gap: Spacing.sm,
-	},
-	input: {
-		borderWidth: 1,
-		borderRadius: Spacing.sm,
-		padding: Spacing.sm,
-		backgroundColor: Colors.inputBg,
-		borderColor: Colors.inputBorder,
-		color: Colors.textPrimary,
 	},
 	button: {
 		backgroundColor: Colors.accent,
@@ -221,5 +234,44 @@ const styles = StyleSheet.create({
 	changeImageButton: {
 		paddingVertical: Spacing.sm,
 		paddingHorizontal: Spacing.md,
+	},
+	field: { marginBottom: 16 },
+	label: {
+		fontSize: 14,
+		color: Colors.textSecondary,
+		marginBottom: 6,
+		fontWeight: "500",
+	},
+	input: {
+		borderWidth: 1,
+		borderColor: Colors.inputBorder,
+		borderRadius: 8,
+		paddingHorizontal: 12,
+		paddingVertical: 10,
+		fontSize: 16,
+		color: Colors.textPrimary,
+		backgroundColor: Colors.inputBg,
+	},
+	inputError: {
+		borderColor: Colors.accent,
+		borderWidth: 1.5,
+	},
+	errorText: {
+		fontSize: 12,
+		color: Colors.accent,
+		marginTop: 4,
+	},
+	submitBtn: {
+		backgroundColor: Colors.primary,
+		paddingVertical: 14,
+		borderRadius: 10,
+		alignItems: "center",
+		marginTop: 12,
+	},
+	submitBtnDisabled: { opacity: 0.5 },
+	submitBtnText: {
+		color: Colors.background,
+		fontSize: 16,
+		fontWeight: "700",
 	},
 });
