@@ -7,17 +7,49 @@ import { useTrips } from "@/context/TripsContext";
 import { getTripStats } from "@/utils/tripStats";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useCallback, useMemo } from "react";
-import { FlatList, Platform, Pressable, StyleSheet } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	ActivityIndicator,
+	FlatList,
+	Platform,
+	Pressable,
+	StyleSheet,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const PAGE_SIZE = 20;
 
 export default function HomeScreen() {
 	const { trips } = useTrips();
+	const sortedTrips = useMemo(
+		() => [...trips].sort((a, b) => b.rating - a.rating),
+		[trips],
+	);
+	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+	const visibleTrips = useMemo(
+		() => sortedTrips.slice(0, visibleCount),
+		[sortedTrips, visibleCount],
+	);
+
 	const { tripCount, averageRating, uniqueDestinations } = getTripStats(trips);
 
-	const sortedTrips = useMemo(() => {
-		return [...trips].sort((a, b) => b.rating - a.rating);
-	}, [trips]);
+	useEffect(() => {
+		setVisibleCount(PAGE_SIZE);
+	}, [sortedTrips]);
+
+	const loadMore = () => {
+		if (isLoadingMore || visibleCount >= sortedTrips.length) return;
+
+		setIsLoadingMore(true);
+		setTimeout(() => {
+			setVisibleCount((count) =>
+				Math.min(count + PAGE_SIZE, sortedTrips.length),
+			);
+			setIsLoadingMore(false);
+		}, 500);
+	};
 
 	const handleTripPress = useCallback(
 		(id: string) => {
@@ -40,12 +72,17 @@ export default function HomeScreen() {
 				uniqueDestinations={uniqueDestinations}
 			/>
 			<FlatList
-				data={sortedTrips}
+				data={visibleTrips}
 				keyExtractor={(item) => item.id}
 				initialNumToRender={10}
 				maxToRenderPerBatch={8}
 				windowSize={5}
 				removeClippedSubviews={Platform.OS === "android"}
+				onEndReached={loadMore}
+				onEndReachedThreshold={0.5}
+				ListFooterComponent={
+					isLoadingMore ? <ActivityIndicator color={Colors.primary} /> : null
+				}
 				renderItem={({ item }) => (
 					<TripCard trip={item} onPress={handleTripPress} />
 				)}
@@ -62,10 +99,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: Colors.background,
 		paddingHorizontal: Spacing.lg,
-	},
-	content: {
-		paddingTop: Spacing.lg,
-		paddingBottom: Spacing.xl + 72,
 	},
 	fab: {
 		position: "absolute",
