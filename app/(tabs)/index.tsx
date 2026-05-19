@@ -7,13 +7,17 @@ import { useTrips } from "@/context/TripsContext";
 import { getTripStats } from "@/utils/tripStats";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useCallback } from "react";
-import { FlatList, Pressable, StyleSheet } from "react-native";
+import { useCallback, useMemo } from "react";
+import { FlatList, Platform, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
 	const { trips } = useTrips();
 	const { tripCount, averageRating, uniqueDestinations } = getTripStats(trips);
+
+	const sortedTrips = useMemo(() => {
+		return [...trips].sort((a, b) => b.rating - a.rating);
+	}, [trips]);
 
 	const handleTripPress = useCallback(
 		(id: string) => {
@@ -36,10 +40,12 @@ export default function HomeScreen() {
 				uniqueDestinations={uniqueDestinations}
 			/>
 			<FlatList
-				data={trips}
+				data={sortedTrips}
 				keyExtractor={(item) => item.id}
 				initialNumToRender={10}
+				maxToRenderPerBatch={8}
 				windowSize={5}
+				removeClippedSubviews={Platform.OS === "android"}
 				renderItem={({ item }) => (
 					<TripCard trip={item} onPress={handleTripPress} />
 				)}
