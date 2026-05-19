@@ -5,14 +5,9 @@ import { Spacing } from "@/constants/Spacing";
 import { useFetch } from "@/hooks/useFetch";
 import type { UnsplashResponse } from "@/types/unsplash";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useMemo } from "react";
-import {
-	ActivityIndicator,
-	Image,
-	StyleSheet,
-	Text,
-	View,
-} from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 interface DestinationPhotoProps {
 	city: string;
@@ -47,7 +42,9 @@ export function DestinationPhoto({ city, fallbackUri }: DestinationPhotoProps) {
 					<Image
 						source={{ uri: heroUri }}
 						style={styles.image}
-						resizeMode="cover"
+						contentFit="cover"
+						cachePolicy="memory-disk"
+						transition={300}
 					/>
 				) : photoError ? (
 					<View style={styles.errorContainer}>
@@ -58,7 +55,11 @@ export function DestinationPhoto({ city, fallbackUri }: DestinationPhotoProps) {
 					</View>
 				) : (
 					<View style={styles.placeholder}>
-						<Ionicons name="image-outline" size={64} color={Colors.placeholder} />
+						<Ionicons
+							name="image-outline"
+							size={64}
+							color={Colors.placeholder}
+						/>
 						<Text style={styles.placeholderText}>Brak zdjęcia</Text>
 					</View>
 				)}

@@ -1,17 +1,11 @@
-import {
-	Image,
-	Pressable,
-	StyleSheet,
-	Text,
-	View,
-} from "react-native";
-
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
 import type { Trip } from "@/types/tripSchema";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import RatingStars from "./RatingStars";
 
 type TripCardProps = {
@@ -31,7 +25,13 @@ export const TripCard = React.memo(function TripCard({
 		<Pressable onPress={() => onPress(trip.id)}>
 			<View style={styles.card}>
 				{trip.imageUri && (
-					<Image source={{ uri: trip.imageUri }} style={styles.image} />
+					<Image
+						source={{ uri: trip.imageUri }}
+						style={styles.image}
+						contentFit="cover"
+						cachePolicy="memory-disk"
+						transition={200}
+					/>
 				)}
 				{trip.galleryUris && trip.galleryUris.length > 0 && (
 					<View style={styles.galleryContainer}>

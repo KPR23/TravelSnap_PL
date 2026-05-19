@@ -4,8 +4,9 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useFetch } from "@/hooks/useFetch";
 import type { UnsplashResponse } from "@/types/unsplash";
+import { Image } from "expo-image";
 import { useEffect, useMemo } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 interface DestinationCardProps {
 	city: string;
@@ -79,7 +80,13 @@ export function DestinationCard({
 
 	return (
 		<View style={styles.container}>
-			<Image source={{ uri: photoUri }} style={styles.image} resizeMode="cover" />
+			<Image
+				source={{ uri: photoUri }}
+				style={styles.image}
+				contentFit="cover"
+				cachePolicy="memory-disk"
+				transition={200}
+			/>
 			<View style={styles.overlay}>
 				<Text style={styles.city}>{city}</Text>
 			</View>
