@@ -6,10 +6,9 @@ import {
 	requestMediaLibraryPermissions,
 } from "./permissions";
 
-export const pickImage = async (
-	tripId: string,
-	setImageUri: (uri: string) => void | Promise<void>,
-) => {
+type SetImageUri = (uri: string) => void | Promise<void>;
+
+const pickImageFromLibrary = async (): Promise<string | undefined> => {
 	try {
 		const status = await requestMediaLibraryPermissions();
 		if (status !== "granted") {
@@ -25,19 +24,14 @@ export const pickImage = async (
 		});
 
 		if (!result.canceled) {
-			const pickedUri = result.assets[0].uri;
-			const uri = await saveImageToTrip(pickedUri, tripId);
-			await setImageUri(uri);
+			return result.assets[0].uri;
 		}
 	} catch {
 		Alert.alert("Nie udało się dodać zdjęcia");
 	}
 };
 
-export const takePhoto = async (
-	tripId: string,
-	setImageUri: (uri: string) => void | Promise<void>,
-) => {
+const takePhotoWithCamera = async (): Promise<string | undefined> => {
 	const status = await requestCameraPermissions();
 
 	if (status !== "granted") {
@@ -54,22 +48,60 @@ export const takePhoto = async (
 		});
 
 		if (!result.canceled) {
-			const pickedUri = result.assets[0].uri;
-			const uri = await saveImageToTrip(pickedUri, tripId);
-			await setImageUri(uri);
+			return result.assets[0].uri;
 		}
 	} catch {
 		Alert.alert("Nie udało się zrobić zdjęcia");
 	}
 };
 
-export const handleAddPhoto = async (
+const setSavedTripImage = async (
 	tripId: string,
-	setImageUri: (uri: string) => void | Promise<void>,
-) => {
+	pickUri: () => Promise<string | undefined>,
+	setImageUri: SetImageUri,
+): Promise<void> => {
+	const pickedUri = await pickUri();
+	if (pickedUri) {
+		const savedUri = await saveImageToTrip(pickedUri, tripId);
+		await setImageUri(savedUri);
+	}
+};
+
+const setPickedImage = async (
+	pickUri: () => Promise<string | undefined>,
+	setImageUri: SetImageUri,
+): Promise<void> => {
+	const pickedUri = await pickUri();
+	if (pickedUri) {
+		await setImageUri(pickedUri);
+	}
+};
+
+export const handleAddPhoto = (tripId: string, setImageUri: SetImageUri) => {
 	Alert.alert("Dodaj zdjęcie", "Wybierz źródło", [
-		{ text: "Galeria", onPress: () => pickImage(tripId, setImageUri) },
-		{ text: "Kamera", onPress: () => takePhoto(tripId, setImageUri) },
+		{
+			text: "Galeria",
+			onPress: () =>
+				setSavedTripImage(tripId, pickImageFromLibrary, setImageUri),
+		},
+		{
+			text: "Kamera",
+			onPress: () => setSavedTripImage(tripId, takePhotoWithCamera, setImageUri),
+		},
+		{ text: "Anuluj", style: "cancel" },
+	]);
+};
+
+export const handlePickPhoto = (setImageUri: SetImageUri) => {
+	Alert.alert("Dodaj zdjęcie", "Wybierz źródło", [
+		{
+			text: "Galeria",
+			onPress: () => setPickedImage(pickImageFromLibrary, setImageUri),
+		},
+		{
+			text: "Kamera",
+			onPress: () => setPickedImage(takePhotoWithCamera, setImageUri),
+		},
 		{ text: "Anuluj", style: "cancel" },
 	]);
 };
