@@ -11,8 +11,6 @@ import { useCallback } from "react";
 import { FlatList, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const CARD_HEIGHT = 140;
-
 export default function HomeScreen() {
 	const { trips } = useTrips();
 	const { tripCount, averageRating, uniqueDestinations } = getTripStats(trips);
@@ -40,11 +38,6 @@ export default function HomeScreen() {
 			<FlatList
 				data={trips}
 				keyExtractor={(item) => item.id}
-				getItemLayout={(_, index) => ({
-					length: CARD_HEIGHT,
-					offset: CARD_HEIGHT * index,
-					index,
-				})}
 				initialNumToRender={10}
 				windowSize={5}
 				renderItem={({ item }) => (
