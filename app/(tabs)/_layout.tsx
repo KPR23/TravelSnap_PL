@@ -33,6 +33,15 @@ export default function RootLayout() {
 				}}
 			/>
 			<Tabs.Screen
+				name="map"
+				options={{
+					title: "Map",
+					tabBarIcon: ({ color, size }) => (
+						<Ionicons name="map" color={color} size={size} />
+					),
+				}}
+			/>
+			<Tabs.Screen
 				name="profile"
 				options={{
 					title: "Profile",

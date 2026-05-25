@@ -1,23 +1,62 @@
-import EmptyState from "@/components/EmptyState";
 import ScreenHeader from "@/components/ScreenHeader";
-import TripCard from "@/components/TripCard";
+import { TripCard } from "@/components/TripCard";
 import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
 import { getTripStats } from "@/utils/tripStats";
 import { Ionicons } from "@expo/vector-icons";
-import { Link, router } from "expo-router";
-import { Pressable, ScrollView, StyleSheet } from "react-native";
+import { router } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	ActivityIndicator,
+	FlatList,
+	Platform,
+	Pressable,
+	StyleSheet,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const PAGE_SIZE = 20;
+
 export default function HomeScreen() {
-	const { trips, deleteTrip } = useTrips();
+	const { trips } = useTrips();
+	const sortedTrips = useMemo(
+		() => [...trips].sort((a, b) => b.rating - a.rating),
+		[trips],
+	);
+	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+	const visibleTrips = useMemo(
+		() => sortedTrips.slice(0, visibleCount),
+		[sortedTrips, visibleCount],
+	);
+
 	const { tripCount, averageRating, uniqueDestinations } = getTripStats(trips);
 
-	const handleDeleteTrip = async (id: string) => {
-		await deleteTrip(id);
+	useEffect(() => {
+		setVisibleCount(PAGE_SIZE);
+	}, [sortedTrips]);
+
+	const loadMore = () => {
+		if (isLoadingMore || visibleCount >= sortedTrips.length) return;
+
+		setIsLoadingMore(true);
+		setTimeout(() => {
+			setVisibleCount((count) =>
+				Math.min(count + PAGE_SIZE, sortedTrips.length),
+			);
+			setIsLoadingMore(false);
+		}, 500);
 	};
+
+	const handleTripPress = useCallback(
+		(id: string) => {
+			router.push(`/trip/${id}`);
+		},
+		[router],
+	);
 
 	return (
 		<SafeAreaView style={styles.container}>
@@ -32,26 +71,22 @@ export default function HomeScreen() {
 				averageRating={averageRating}
 				uniqueDestinations={uniqueDestinations}
 			/>
-			<ScrollView contentContainerStyle={styles.content}>
-				{trips.length === 0 ? (
-					<EmptyState />
-				) : (
-					trips.map((trip) => (
-						<Link
-							key={trip.id}
-							href={{
-								pathname: "/trip/[id]",
-								params: {
-									id: trip.id,
-								},
-							}}
-							asChild
-						>
-							<TripCard {...trip} onDelete={() => handleDeleteTrip(trip.id)} />
-						</Link>
-					))
+			<FlatList
+				data={visibleTrips}
+				keyExtractor={(item) => item.id}
+				initialNumToRender={10}
+				maxToRenderPerBatch={8}
+				windowSize={5}
+				removeClippedSubviews={Platform.OS === "android"}
+				onEndReached={loadMore}
+				onEndReachedThreshold={0.5}
+				ListFooterComponent={
+					isLoadingMore ? <ActivityIndicator color={Colors.primary} /> : null
+				}
+				renderItem={({ item }) => (
+					<TripCard trip={item} onPress={handleTripPress} />
 				)}
-			</ScrollView>
+			/>
 			<Pressable style={styles.fab} onPress={() => router.push("/add-trip")}>
 				<Ionicons name="add" size={30} color={Colors.background} />
 			</Pressable>
@@ -64,10 +99,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: Colors.background,
 		paddingHorizontal: Spacing.lg,
-	},
-	content: {
-		paddingTop: Spacing.lg,
-		paddingBottom: Spacing.xl + 72,
 	},
 	fab: {
 		position: "absolute",

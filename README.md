@@ -1,709 +1,331 @@
-# Zadanie 9 - Formularze i walidacja
+# Zadanie 11 - Mapy i lokalizacja
 
-> **Cel zadania:** zamienić `AddTripForm` z gołego `useState` na `react-hook-form` + `Zod`, dodać field-level errors, loading state przy submicie, i nowy ekran edycji podróży. Po skończonym CORE Twój formularz będzie miał profesjonalną walidację i będzie się skalował z aplikacją bez bólu.
+## Cel
 
----
-
-## Co dostajesz na start
-
-Po Wykładzie 8 masz:
-
-- `AddTripForm.tsx` na czterech `useState` (title, destination, date, rating) - submit bez walidacji.
-- `TripContext` z `addTrip`, `deleteTrip`, `updateTrip` (sygnatura `(id, partial) => Promise<void>`) i hydracją z `AsyncStorage`.
-- `types/trip.ts` z typami `TripData` i `Trip extends TripData { id }`.
-- Ekrany: `(tabs)/index.tsx` (lista), `(tabs)/explore.tsx`, `trip/[id].tsx` (details), `trip/gallery/[id].tsx`.
-
-Punkt startowy zadania: w `AddTripForm.tsx` można nacisnąć "Dodaj" mając pusty tytuł i pole `date` w dowolnym formacie. To naprawiamy.
+Dodaj do TravelSnap nowy tab **Map** z pełnoekranową mapą, na której wyświetlisz pinezki (markery) dla każdego wyjazdu posiadającego współrzędne. Użytkownik może kliknąć marker, zobaczyć callout z miniaturą i tytułem, a następnie przejść do szczegółów wyjazdu. Mapa automatycznie dopasowuje widok do wszystkich markerów.
 
 ---
 
-## Design Spec - nowe pliki
+## Krok 0 - Setup
 
-| Plik                                            | Co w nim siedzi                                                                |
-| ----------------------------------------------- | ------------------------------------------------------------------------------ |
-| `types/tripSchema.ts`                           | `tripSchema` (z.object), typ `TripFormData = z.infer<typeof tripSchema>`       |
-| `app/trip/edit/[id].tsx`                        | Ekran edycji podróży - ten sam formularz z `defaultValues` z istniejącego trip |
-| `components/TripFormFields.tsx` _(opcjonalnie)_ | Wyodrębniony JSX pól formularza, reużywany między AddTripForm i ekranem edycji |
+**Cel:** Zainstaluj zależności i skonfiguruj Google Maps API key.
 
-## Design Spec - modyfikowane pliki
-
-| Plik                         | Co zmieniasz                                                                                  |
-| ---------------------------- | --------------------------------------------------------------------------------------------- |
-| `components/AddTripForm.tsx` | Refaktor z `useState` na `useForm` + `Controller`, dodanie field-level errors i loading state |
-| `app/trip/[id].tsx`          | Dodajesz przycisk "Edytuj" obok "Usuń", który prowadzi do `/trip/edit/[id]`                   |
-| `package.json`               | Nowe zależności: `react-hook-form`, `@hookform/resolvers`, `zod`                              |
-
-## Konwencje stylu (zachować spójność z L1–L8)
-
-- Kolory z `constants/Colors.ts` — `accent` (`#E94560`) dla błędów, `reactBlue` dla CTA, `gray500` dla placeholder.
-- `borderColor` inputu w stanie błędu: `Colors.accent`; w stanie normalnym: `Colors.gray300`.
-- `errorText`: `fontSize: 12`, `color: Colors.accent`, `marginTop: 4`.
-- Przycisk submit: tło `Colors.reactBlue`, tekst `Colors.darkBg`; disabled: `opacity: 0.5`.
-
----
-
-## Krok 0 - Setup zależności
-
-**Cel:** zainstaluj `react-hook-form`, `@hookform/resolvers` (dla zodResolver) i `zod`.
-
-1. W katalogu projektu uruchom:
-
-   ```bash
-   npx expo install react-hook-form @hookform/resolvers zod
-   ```
-
-   `expo install` dobiera wersje kompatybilne z Twoim SDK. Jeśli z jakiegoś powodu nie zadziała, można też `npm install react-hook-form @hookform/resolvers zod` - ale `expo install` jest bezpieczniejsze.
-
-2. Sprawdź w `package.json`, że pojawiły się w `dependencies`:
-
-   ```json
-   "react-hook-form": "^7.x.x",
-   "@hookform/resolvers": "^3.x.x",
-   "zod": "^3.x.x"
-   ```
-
-3. Zrestartuj Metro (`Ctrl+C` i `npx expo start` ponownie).
-
-**Pułapka:** jeśli widzisz błąd `Cannot find module '@hookform/resolvers/zod'`, upewnij się, że importujesz z `@hookform/resolvers/zod` (podścieżka), nie z `@hookform/resolvers`.
-
----
-
-## Krok 1 - Schemat Zod dla TripData
-
-**Cel:** zdefiniować jeden źródłowy plik z regułami walidacji i typem `TripFormData`.
-
-**Plik do utworzenia:** `types/tripSchema.ts`.
-
-### Sygnatura
-
-```ts
-import { z } from "zod";
-
-export const tripSchema = z.object({
-	/* ... */
-});
-export type TripFormData = z.infer<typeof tripSchema>;
+```bash
+npx expo install expo-location react-native-maps
 ```
 
-### Wymagania
-
-1. Pole `title`:
-   - `z.string()`
-   - `.min(3, 'Tytuł musi mieć co najmniej 3 znaki')`
-   - `.max(60, 'Tytuł może mieć maksymalnie 60 znaków')`
-   - `.trim()` — usuwa białe znaki z początku i końca.
-
-2. Pole `destination`:
-   - `z.string()`
-   - `.min(1, 'Cel podróży jest wymagany')`
-   - `.max(80, 'Cel podróży: maks 80 znaków')`.
-
-3. Pole `date`:
-   - `z.string()`
-   - `.regex(/^\d{4}-\d{2}-\d{2}$/, 'Data w formacie YYYY-MM-DD')`.
-
-4. Pole `rating`:
-   - `z.number({ invalid_type_error: 'Ocena musi być liczbą' })`
-   - `.int('Ocena musi być liczbą całkowitą')`
-   - `.min(1, 'Min 1 gwiazdka')`
-   - `.max(5, 'Max 5 gwiazdek')`.
-
-5. Pole `imageUri`: `z.string().optional()` (URI z `expo-file-system`, nie zawsze URL — bez `.url()`).
-
-6. Pole `galleryUris`: `z.array(z.string()).optional()`.
-
-7. Wyeksportuj `tripSchema` (jako stałą) i typ `TripFormData = z.infer<typeof tripSchema>`.
-
-### Pułapka
-
-- Nie używaj `.url()` dla `imageUri`. W L4/L5 przechowujesz lokalne URI typu `file:///...` — `.url()` może je odrzucać (zależy od wersji Zod).
-- `invalid_type_error` na `z.number()` łapie sytuacje, kiedy do pola wpadnie string z `setValue` lub ręcznego ustawienia — zostaw to dla bezpieczeństwa, choć przy normalnym flow nie powinno się zdarzyć.
-
----
-
-## Krok 2 - Refaktor AddTripForm na react-hook-form
-
-**Cel:** wymienić cztery `useState` na jeden `useForm` z `zodResolver`, owinąć każde `TextInput` w `Controller`.
-
-**Plik:** `components/AddTripForm.tsx`.
-
-### Wymagania
-
-1. Usuń wszystkie `useState` dla pól formularza (`title`, `destination`, `date`, `rating`).
-
-2. Dodaj importy:
-
-   ```ts
-   import { Controller, useForm } from "react-hook-form";
-   import { zodResolver } from "@hookform/resolvers/zod";
-   import { tripSchema, TripFormData } from "@/types/tripSchema";
-   ```
-
-3. Wywołaj `useForm<TripFormData>` z konfiguracją:
-
-   ```ts
-   const {
-   	control,
-   	handleSubmit,
-   	reset,
-   	formState: { errors, isSubmitting },
-   } = useForm<TripFormData>({
-   	resolver: zodResolver(tripSchema),
-   	defaultValues: {
-   		title: "",
-   		destination: "",
-   		date: "",
-   		rating: 3,
-   	},
-   	mode: "onBlur",
-   });
-   ```
-
-4. Każde `TextInput` zamień na `<Controller name="..." control={control} render={({ field, fieldState }) => (...)} />`. Wewnątrz `render`:
-   - `value={field.value}`,
-   - `onChangeText={field.onChange}` (uwaga: TextInput w RN ma `onChangeText`, nie `onChange`),
-   - `onBlur={field.onBlur}`.
-
-5. Pole `rating` zostaje obsługiwane przez Twój komponent `RatingStars` (z L2/L3). Owinąć go też w `Controller`:
-
-   ```tsx
-   <Controller
-   	control={control}
-   	name="rating"
-   	render={({ field: { onChange, value } }) => (
-   		<RatingStars rating={value} onChange={onChange} />
-   	)}
-   />
-   ```
-
-   Jeśli Twój `RatingStars` używa innej nazwy propu niż `rating`/`onChange` — dostosuj. Liczba musi być integer 1–5.
-
-6. Funkcja `onSubmit` przyjmuje typowany obiekt `TripFormData`:
-
-   ```ts
-   const onSubmit = async (data: TripFormData) => {
-   	await addTrip(data); // addTrip z useTrips()
-   	reset();
-   	// jeśli formularz jest na osobnym ekranie — router.back()
-   };
-   ```
-
-7. Przycisk submit:
-
-   ```tsx
-   <Pressable onPress={handleSubmit(onSubmit)} disabled={isSubmitting} ... />
-   ```
-
-### Pułapka
-
-- W `Controller` przekazujesz `field.onChange` do `onChangeText` (string-first), nie do `onChange`. Wpięcie do `onChange` powoduje, że RHF dostaje obiekt eventu zamiast stringa i walidacja Zod się sypie.
-- Nie ustawiaj `defaultValues` jako wynik wywołania funkcji liczonej na każdym renderze — `useForm` czyta `defaultValues` tylko raz przy montowaniu. Jeśli potrzebujesz dynamicznych defaultów (jak na ekranie edycji), używaj `reset(values)` w `useEffect`.
-- Pole `rating` w `defaultValues` musi być `number` (np. `3`), nie `'3'`. Inaczej Zod od razu wywali invalid_type_error.
-
----
-
-## Krok 3 - Field-level errors w UI
-
-**Cel:** pod każdym inputem renderować komunikat błędu, podświetlać ramkę inputu na czerwono w stanie błędu.
-
-### Wymagania
-
-1. W stylesheet `AddTripForm.tsx` dodaj:
-
-   ```ts
-   const styles = StyleSheet.create({
-   	field: { marginBottom: 16 },
-   	label: {
-   		fontSize: 14,
-   		color: Colors.gray700,
-   		marginBottom: 6,
-   		fontWeight: "500",
-   	},
-   	input: {
-   		borderWidth: 1,
-   		borderColor: Colors.gray300,
-   		borderRadius: 8,
-   		paddingHorizontal: 12,
-   		paddingVertical: 10,
-   		fontSize: 16,
-   		color: Colors.gray900,
-   		backgroundColor: Colors.white,
-   	},
-   	inputError: {
-   		borderColor: Colors.accent,
-   		borderWidth: 1.5,
-   	},
-   	errorText: {
-   		fontSize: 12,
-   		color: Colors.accent,
-   		marginTop: 4,
-   	},
-   });
-   ```
-
-2. W każdym `Controller`'s `render` wykorzystaj `fieldState.error`:
-
-   ```tsx
-   <View style={styles.field}>
-   	<Text style={styles.label}>Tytuł</Text>
-   	<TextInput
-   		style={[styles.input, fieldState.error && styles.inputError]}
-   		value={value}
-   		onChangeText={onChange}
-   		onBlur={onBlur}
-   		placeholder="np. Wycieczka do Paryża"
-   		placeholderTextColor={Colors.gray500}
-   	/>
-   	{fieldState.error && (
-   		<Text style={styles.errorText}>{fieldState.error.message}</Text>
-   	)}
-   </View>
-   ```
-
-3. Powtórz dla `destination` i `date`. Dla `rating`, jeśli używasz `RatingStars`, error renderuj pod komponentem.
-
-### Pułapka
-
-- `fieldState.error` jest `undefined`, gdy nie ma błędu — short-circuit `{fieldState.error && (...)}` nie renderuje wtedy nic.
-- Komunikaty błędów pojawiają się dopiero po pierwszym blur (tryb `onBlur`). To celowe — nie chcemy spamować błędami przy każdej literze.
-
----
-
-## Krok 4 - Submit z loading state
-
-**Cel:** podczas submitu przycisk jest disabled i pokazuje `ActivityIndicator`. Po sukcesie formularz się czyści.
-
-### Wymagania
-
-1. Funkcja `onSubmit` (z Kroku 2) jest `async`. RHF automatycznie ustawia `isSubmitting: true` na czas wykonywania.
-
-2. W `AsyncStorage` operacje są błyskawiczne, więc żeby zobaczyć efekt loading state, zasymuluj 500ms opóźnienia (tylko na czas testowania!):
-
-   ```ts
-   const onSubmit = async (data: TripFormData) => {
-   	await new Promise((r) => setTimeout(r, 500)); // tylko do testu
-   	await addTrip(data);
-   	reset();
-   };
-   ```
-
-   Po przetestowaniu **usuń** linię z `setTimeout`.
-
-3. Przycisk submit:
-
-   ```tsx
-   <Pressable
-   	onPress={handleSubmit(onSubmit)}
-   	disabled={isSubmitting}
-   	style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
-   >
-   	{isSubmitting ? (
-   		<ActivityIndicator color={Colors.darkBg} />
-   	) : (
-   		<Text style={styles.submitBtnText}>Dodaj podróż</Text>
-   	)}
-   </Pressable>
-   ```
-
-4. Style:
-
-   ```ts
-   submitBtn: {
-     backgroundColor: Colors.reactBlue,
-     paddingVertical: 14, borderRadius: 10,
-     alignItems: 'center', marginTop: 12,
-   },
-   submitBtnDisabled: { opacity: 0.5 },
-   submitBtnText: {
-     color: Colors.darkBg, fontSize: 16, fontWeight: '700',
-   },
-   ```
-
-### Pułapka
-
-- `ActivityIndicator` musi mieć kontrastowy kolor względem tła przycisku. `Colors.reactBlue` to jasny niebieski, więc `color={Colors.darkBg}` (ciemny granat) jest widoczny.
-- Nie wywołuj `onSubmit` bezpośrednio (np. `onPress={onSubmit}`) — ominiesz walidację. Zawsze `onPress={handleSubmit(onSubmit)}`.
-
----
-
-## Krok 5 - Ekran edycji `app/trip/edit/[id].tsx`
-
-**Cel:** stworzyć nowy ekran z formularzem wypełnionym istniejącymi danymi podróży. Submit wywołuje `updateTrip` i wraca na poprzedni ekran.
-
-**Plik do utworzenia:** `app/trip/edit/[id].tsx`.
-
-### Wymagania
-
-1. Szkielet pliku:
-
-   ```tsx
-   import { useEffect, useMemo } from "react";
-   import {
-   	View,
-   	Text,
-   	StyleSheet,
-   	Pressable,
-   	ActivityIndicator,
-   	TextInput,
-   	ScrollView,
-   } from "react-native";
-   import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-   import { Controller, useForm } from "react-hook-form";
-   import { zodResolver } from "@hookform/resolvers/zod";
-   import { tripSchema, TripFormData } from "@/types/tripSchema";
-   import { useTrips } from "@/context/TripContext";
-   import { Colors } from "@/constants/Colors";
-   ```
-
-2. Wewnątrz komponentu:
-
-   ```ts
-   const { id } = useLocalSearchParams<{ id: string }>();
-   const router = useRouter();
-   const { trips, updateTrip } = useTrips();
-   const trip = useMemo(() => trips.find((t) => t.id === id), [trips, id]);
-   ```
-
-3. Konfiguracja formularza:
-
-   ```ts
-   const {
-   	control,
-   	handleSubmit,
-   	reset,
-   	formState: { errors, isSubmitting },
-   } = useForm<TripFormData>({
-   	resolver: zodResolver(tripSchema),
-   	defaultValues: {
-   		title: "",
-   		destination: "",
-   		date: "",
-   		rating: 3,
-   	},
-   	mode: "onBlur",
-   });
-   ```
-
-4. Wypełnij formularz, gdy znajdziesz `trip`:
-
-   ```ts
-   useEffect(() => {
-   	if (trip) {
-   		reset({
-   			title: trip.title,
-   			destination: trip.destination,
-   			date: trip.date,
-   			rating: trip.rating,
-   			imageUri: trip.imageUri,
-   			galleryUris: trip.galleryUris,
-   		});
+**Wymagania:**
+
+1. Zainstaluj oba pakiety jednym poleceniem.
+2. Dla Androida: dodaj Google Maps API key w `app.json` (lub `app.config.ts`):
+   ```json
+   {
+   	"expo": {
+   		"android": {
+   			"config": {
+   				"googleMaps": {
+   					"apiKey": "TWOJ_GOOGLE_MAPS_API_KEY"
+   				}
+   			}
+   		}
    	}
-   }, [trip, reset]);
-   ```
-
-5. Funkcja submit wywołuje `updateTrip`:
-
-   ```ts
-   const onSubmit = async (data: TripFormData) => {
-   	if (!trip) return;
-   	await updateTrip(trip.id, data);
-   	router.back();
-   };
-   ```
-
-6. Jeśli `trip === undefined` (np. zły id), pokaż pusty stan z linkiem powrotnym:
-
-   ```tsx
-   if (!trip) {
-   	return (
-   		<View style={styles.empty}>
-   			<Text>Nie znaleziono podróży.</Text>
-   			<Pressable onPress={() => router.back()}>
-   				<Text>Wróć</Text>
-   			</Pressable>
-   		</View>
-   	);
    }
    ```
+3. Dla iOS: Apple Maps działa bez klucza - nie musisz nic konfigurować.
+4. Po instalacji przebuduj aplikację: `npx expo run:android` lub `npx expo run:ios` (react-native-maps nie działa w Expo Go na Androidzie z Google provider).
 
-7. JSX formularza jest identyczny jak w `AddTripForm` (te same `Controller` z tymi samymi polami). Możesz albo skopiować, albo (lepiej) wyodrębnić wspólny `TripFormFields` jako komponent. Wartość pól pochodzi już z `reset()` w useEffect.
-
-8. Przycisk submit ma teraz tekst "Zapisz zmiany" (nie "Dodaj podróż").
-
-9. `<Stack.Screen options={{ title: 'Edytuj podróż' }} />` na górze JSX-a, żeby nagłówek nawigacji pokazywał właściwy tytuł.
-
-### Pułapka
-
-- Nie przekazuj całego obiektu `trip` do `reset` — `trip` ma pole `id`, którego `TripFormData` nie zna. `reset` zignoruje nieznane pola, ale TypeScript się burzy. Lepiej wybierać pola jawnie (jak wyżej).
-- `useEffect` z `[trip, reset]` może odpalić się ponownie, jeśli lista `trips` się zmieni z innego powodu. W praktyce nie jest to problem, bo `reset` zachowuje czystość formularza. Jeśli zauważysz dziwne nadpisywanie — dodaj flagę `useRef(false)`, która gwarantuje uruchomienie tylko raz przy pierwszym pojawieniu się `trip`.
-- `Stack.Screen` musi być wewnątrz `Stack` w `_layout.tsx` lub w samym ekranie jako konfiguracja — sprawdź, że masz nawigację stack-ową dla tej trasy.
+**⚠ Pułapka:** Google Maps API key musi być na start **unrestricted**. Restricted key = pusta mapa bez żadnego błędu w konsoli. Ogranicz klucz dopiero po potwierdzeniu, że mapa się renderuje.
 
 ---
 
-## Krok 6 - Przycisk "Edytuj" w `trip/[id].tsx`
+## Krok 1 - Custom hook `useLocation`
 
-**Cel:** dodać do ekranu details przycisk, który prowadzi na ekran edycji.
+**Cel:** Stwórz reużywalny hook do pobierania bieżącej lokalizacji użytkownika.
 
-### Wymagania
+**Plik:** `hooks/useLocation.ts`
 
-1. W komponencie ekranu details dodaj importy (jeśli jeszcze nie ma):
+**Sygnatura:**
 
-   ```ts
-   import { useRouter } from "expo-router";
-   ```
+```ts
+import { LocationObject } from "expo-location";
 
-2. Wewnątrz komponentu:
+interface UseLocationResult {
+	location: LocationObject | null;
+	error: string | null;
+	loading: boolean;
+}
 
-   ```ts
-   const router = useRouter();
-   ```
+export function useLocation(): UseLocationResult;
+```
 
-3. Dodaj przycisk obok istniejącego "Usuń" (lub w innym sensownym miejscu — np. w nagłówku):
+**Wymagania:**
 
+1. Przy montowaniu komponentu wywołaj `Location.requestForegroundPermissionsAsync()`.
+2. Jeśli `status !== 'granted'` - ustaw `error` na komunikat opisujący brak uprawnień (np. `"Brak uprawnień do lokalizacji"`), ustaw `loading` na `false`.
+3. Jeśli uprawnienie udzielone - wywołaj `Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })`.
+4. Zapisz wynik w `location`, ustaw `loading` na `false`.
+5. Obsłuż błędy `try/catch` - przy wyjątku ustaw `error` na `e.message`.
+6. Cała logika w `useEffect` z pustą tablicą zależności `[]`.
+7. Return `{ location, error, loading }`.
+
+**⚠ Pułapka:** Na emulatorze Android musisz ręcznie ustawić lokalizację: Extended Controls (…) → Location → wpisz współrzędne. Na iOS Simulator: Debug → Location → Custom Location. Bez tego `getCurrentPositionAsync` może wisieć w nieskończoność.
+
+---
+
+## Krok 2 - Nowy tab "Map" z `<MapView>`
+
+**Cel:** Dodaj trzeci (lub czwarty) tab z pełnoekranową mapą.
+
+**Pliki:** `app/(tabs)/map.tsx`, `app/(tabs)/_layout.tsx`
+
+**Wymagania:**
+
+1. W `_layout.tsx` dodaj nowy `<Tabs.Screen>` z `name="map"`, tytułem "Map" i ikoną mapy (np. `map` z Ionicons lub `map-pin`).
+2. W `map.tsx` użyj hooka `useLocation()` z kroku 1.
+3. Renderuj `<MapView>` z `react-native-maps`:
    ```tsx
-   <Pressable
-   	onPress={() => router.push(`/trip/edit/${trip.id}`)}
-   	style={styles.editBtn}
-   >
-   	<Text style={styles.editBtnText}>Edytuj</Text>
-   </Pressable>
+   import MapView from "react-native-maps";
    ```
+4. `MapView` musi mieć `style={{ flex: 1 }}` - **rodzic musi też mieć `flex: 1`**, inaczej mapa ma 0 wysokości i jest niewidoczna.
+5. Ustaw `initialRegion`:
+   - Jeśli `location` dostępny - użyj `location.coords.latitude` / `longitude` z deltą `0.1`.
+   - Jeśli brak - domyślna Warszawa: `{ latitude: 52.2297, longitude: 21.0122, latitudeDelta: 0.1, longitudeDelta: 0.1 }`.
+6. Gdy `loading === true` - pokaż spinner (`<ActivityIndicator>`).
+7. Gdy `error` - pokaż `<ErrorView>` z opisem błędu i przyciskiem "Otwórz ustawienia" wywołującym `Linking.openSettings()`.
 
-4. Style:
-
-   ```ts
-   editBtn: {
-     backgroundColor: Colors.reactBlue,
-     paddingVertical: 12, paddingHorizontal: 20,
-     borderRadius: 8, marginRight: 8,
-   },
-   editBtnText: {
-     color: Colors.darkBg, fontWeight: '600',
-   },
-   ```
-
-### Pułapka
-
-- Po powrocie z ekranu edycji lista `trips` w `TripContext` musi zawierać już zaktualizowane dane (bo `updateTrip` to robi). Sprawdź, że po `router.back()` Trip Details renderuje się z nowymi wartościami — jeśli nie, problem leży w `TripContext.updateTrip` (a nie w tym, co robisz w L9). W razie czego dodaj `console.log` po wywołaniu `updateTrip`, żeby zobaczyć, że trip w storze faktycznie się zmienił.
+**⚠ Pułapka:** `MapView` z `style={{ flex: 1 }}` w `<View>` bez `flex: 1` = mapa niewidoczna (0px wysokości). Upewnij się, że cały łańcuch rodziców ma `flex: 1`.
 
 ---
 
-### Krok 7 - Async unique-title validation
+## Krok 3 - Rozszerzenie `Trip` o `coordinates`
 
-**Cel:** sprawdzać, czy tytuł nie powiela istniejących (case-insensitive).
+**Cel:** Dodaj opcjonalne pole współrzędnych do modelu danych wyjazdu.
 
-1. W komponencie pobierz listę istniejących tytułów:
+**Pliki:** `types/trip.ts`, `types/tripSchema.ts`
 
+**Wymagania:**
+
+1. W `types/trip.ts` rozszerz interfejs `TripData`:
    ```ts
-   const { trips } = useTrips();
-   const existingTitles = useMemo(
-   	() => trips.map((t) => t.title.toLowerCase()),
+   coordinates?: {
+     latitude: number;
+     longitude: number;
+   };
+   ```
+2. W `types/tripSchema.ts` dodaj opcjonalne pole do Zod schema:
+   ```ts
+   coordinates: z.object({
+     latitude: z.number(),
+     longitude: z.number(),
+   }).optional(),
+   ```
+3. Do testów ręcznie dodaj współrzędne do 2–3 istniejących wyjazdów w danych testowych lub w `TripContext` (np. Paryż: `48.8566, 2.3522`, Tokio: `35.6762, 139.6503`, Rzym: `41.9028, 12.4964`).
+4. Pole `coordinates` jest opcjonalne — nie każdy wyjazd musi je mieć.
+
+**⚠ Pułapka:** Jeśli używasz AsyncStorage do persystencji wyjazdów, stare dane nie będą miały pola `coordinates`. Twój kod musi to obsługiwać - zawsze filtruj `.filter(t => t.coordinates)` przed mapowaniem na markery.
+
+---
+
+## Krok 4 - Markery wyjazdów na mapie
+
+**Cel:** Wyświetl pinezki na mapie dla każdego wyjazdu z ustawionymi współrzędnymi.
+
+**Plik:** `app/(tabs)/map.tsx`
+
+**Wymagania:**
+
+1. Pobierz listę wyjazdów z `TripContext` (`useTrips()`).
+2. Przefiltruj wyjazdy posiadające `coordinates`:
+   ```tsx
+   const tripsWithCoords = useMemo(
+   	() => trips.filter((t) => t.coordinates),
    	[trips],
    );
    ```
-
-2. Zbuduj rozszerzony schemat w `useMemo`:
-
-   ```ts
-   const schema = useMemo(
-   	() =>
-   		tripSchema.extend({
-   			title: tripSchema.shape.title.refine(
-   				async (val) => {
-   					await new Promise((r) => setTimeout(r, 150));
-   					return !existingTitles.includes(val.toLowerCase());
-   				},
-   				{ message: "Tytuł już istnieje — wybierz inny" },
-   			),
-   		}),
-   	[existingTitles],
-   );
-   ```
-
-3. Użyj `schema` w `useForm({ resolver: zodResolver(schema), ... })`.
-
-4. RHF wystawia `isValidating: boolean` — możesz pokazać małe spinnery przy polu w trakcie walidacji.
-
-**Pułapka:** na ekranie edycji NIE chcesz blokować obecnego tytułu jako duplikatu (bo to ten sam trip!). Wyklucz aktualny trip z `existingTitles`:
-
-```ts
-const existingTitles = useMemo(
-	() =>
-		trips.filter((t) => t.id !== trip?.id).map((t) => t.title.toLowerCase()),
-	[trips, trip?.id],
-);
-```
-
-### Krok 8 - `isDirty` + alert "Odrzucić zmiany?"
-
-**Cel:** kiedy użytkownik wciska Back/Esc na ekranie edycji z niezapisanymi zmianami, zapytaj go "Odrzucić zmiany?".
-
-1. W `app/trip/edit/[id].tsx`:
-
-   ```ts
-   import { useNavigation } from 'expo-router';
-   import { Alert } from 'react-native';
-
-   const navigation = useNavigation();
-   const { formState: { isDirty } } = ...;
-
-   useEffect(() => {
-     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-       if (!isDirty) return;
-       e.preventDefault();
-       Alert.alert(
-         'Odrzucić zmiany?',
-         'Masz niezapisane zmiany. Odrzucić je?',
-         [
-           { text: 'Zostań', style: 'cancel' },
-           { text: 'Odrzuć', style: 'destructive',
-             onPress: () => navigation.dispatch(e.data.action) },
-         ]
-       );
-     });
-     return unsubscribe;
-   }, [navigation, isDirty]);
-   ```
-
-**Pułapka:** alert pokaże się też po `router.back()` z onSubmit po Twojej stronie. Rozwiązanie: ustaw flag `submittedRef.current = true` przed `router.back()` i sprawdzaj go w listenerze.
-
-### Krok 9 - Multi-step wizard
-
-**Cel:** rozbić formularz na 3 ekrany: title+destination → date+rating → photo+submit.
-
-1. W `AddTripForm` (albo nowym `AddTripWizard`) dodaj stan `step: 1 | 2 | 3`.
-
-2. Renderuj pola warunkowo:
-
+3. Renderuj `<Marker>` dla każdego wyjazdu:
    ```tsx
    {
-   	step === 1 && <Step1 control={control} />;
+   	tripsWithCoords.map((trip) => (
+   		<Marker
+   			key={trip.id}
+   			coordinate={trip.coordinates!}
+   			title={trip.title}
+   			description={trip.destination}
+   		/>
+   	));
    }
-   {
-   	step === 2 && <Step2 control={control} />;
-   }
-   {
-   	step === 3 && <Step3 control={control} />;
-   }
    ```
+4. Każdy marker wyświetla domyślną pinezkę z `title` i `description` widocznymi po tapnięciu.
+5. Użyj `useMemo` na filtrowanej liście, żeby uniknąć zbędnych rekalkulacji.
 
-3. Przejście "Dalej" waliduje tylko pola bieżącego kroku przez `trigger`:
-
-   ```ts
-   const goNext = async () => {
-   	const fields =
-   		step === 1
-   			? (["title", "destination"] as const)
-   			: (["date", "rating"] as const);
-   	const ok = await trigger(fields);
-   	if (ok) setStep((s) => s + 1);
-   };
-   ```
-
-4. Dodaj pasek postępu na górze (3 kropki, aktywna ma kolor `reactBlue`).
-
-5. Krok 3 ma `handleSubmit(onSubmit)` na przycisku "Dodaj podróż".
-
-**Pułapka:** `trigger` zwraca Promise — czekaj na wynik, nie polegaj na natychmiastowej wartości.
-
-### Krok 10 - Upload zdjęcia jako część formularza
-
-**Cel:** pole `imageUri` ustawiane przez `ImagePicker`, preview pod przyciskiem.
-
-1. Zainstaluj (jeśli jeszcze nie masz z L4/L5):
-
-   ```bash
-   npx expo install expo-image-picker
-   ```
-
-2. W formularzu dodaj `<Controller name="imageUri" control={control} render={...} />`. W `render`:
-
-   ```tsx
-   <View style={styles.field}>
-   	<Text style={styles.label}>Zdjęcie</Text>
-   	{value ? (
-   		<Image source={{ uri: value }} style={styles.preview} />
-   	) : (
-   		<View style={styles.previewPlaceholder}>
-   			<Text style={{ color: Colors.gray500 }}>Brak zdjęcia</Text>
-   		</View>
-   	)}
-   	<Pressable onPress={() => pickImage(onChange)} style={styles.pickBtn}>
-   		<Text>{value ? "Zmień zdjęcie" : "Wybierz zdjęcie"}</Text>
-   	</Pressable>
-   </View>
-   ```
-
-3. Funkcja `pickImage`:
-
-   ```ts
-   const pickImage = async (onChange: (val: string) => void) => {
-   	const result = await ImagePicker.launchImageLibraryAsync({
-   		mediaTypes: ImagePicker.MediaTypeOptions.Images,
-   		quality: 0.8,
-   	});
-   	if (!result.canceled && result.assets[0]) {
-   		onChange(result.assets[0].uri);
-   	}
-   };
-   ```
-
-**Pułapka:** pamiętaj o uprawnieniach (`ImagePicker.requestMediaLibraryPermissionsAsync()` na pierwsze użycie). Bez tego na iOS picker po cichu nie pokazuje zdjęć.
-
-### Krok 11 - UX polish: autoFocus, returnKeyType, KeyboardAvoidingView
-
-**Cel:** profesjonalna obsługa klawiatury.
-
-1. Pierwsze `TextInput` (title) dostaje `autoFocus={true}`.
-
-2. Każde `TextInput` poza ostatnim: `returnKeyType="next"` + `onSubmitEditing={() => nextRef.current?.focus()}`.
-
-3. Ostatnie tekstowe pole: `returnKeyType="done"` + `onSubmitEditing={handleSubmit(onSubmit)}`.
-
-4. Ref na każdy input:
-
-   ```ts
-   const destinationRef = useRef<TextInput>(null);
-   const dateRef = useRef<TextInput>(null);
-   ```
-
-5. Całość owijasz w `KeyboardAvoidingView`:
-
-   ```tsx
-   <KeyboardAvoidingView
-   	behavior={Platform.OS === "ios" ? "padding" : "height"}
-   	style={{ flex: 1 }}
-   >
-   	<ScrollView keyboardShouldPersistTaps="handled">
-   		{/* formularz */}
-   	</ScrollView>
-   </KeyboardAvoidingView>
-   ```
-
-**Pułapka:** `forwardRef` przez `Controller` jest niemożliwy — `Controller` nie wystawia refa. Trzymaj swoje refy zewnętrznie i przekazuj je do `TextInput` bezpośrednio (przez prop `ref`), to działa niezależnie od RHF.
+**⚠ Pułapka:** Nie zapomnij o `key={trip.id}` na `<Marker>`. Bez unikalnego klucza React nie potrafi efektywnie aktualizować markerów i możesz zobaczyć ghost-markery po usunięciu wyjazdu.
 
 ---
 
-## Hints and common pitfalls
+## Krok 5 - Custom Callout z miniaturą
 
-- **Typowanie `data` w onSubmit:** dzięki `useForm<TripFormData>` Twoje `data` w `onSubmit` jest w pełni typowane. Pisz `data.title`, nie `data['title']` - autocomplete robi resztę.
+**Cel:** Po kliknięciu markera pokaż callout z miniaturą zdjęcia, tytułem i destynacją. Kliknięcie callout nawiguje do szczegółów wyjazdu.
 
-- **`mode: 'onBlur'` to optymalny default:** nie spamuje błędami przy każdym keystroke, ale od razu pokazuje błąd po opuszczeniu pola. Tryb `onChange` jest agresywny; `onSubmit` (domyślny) milczy do końca i daje słabą informację zwrotną.
+**Plik:** `app/(tabs)/map.tsx`
 
-- **`fieldState.error` vs `formState.errors`:** wewnątrz `Controller`'s render preferuj `fieldState.error` — to ten sam błąd, ale bez ręcznego dostępu przez nazwę.
+**Wymagania:**
 
-- **`reset(values)` na ekranie edycji:** wywołuj w `useEffect` z `[trip, reset]`, nie próbuj inicjalizować `defaultValues` z `trip` od razu — `trip` może być `undefined` w pierwszym renderze (przed znalezieniem w `trips`).
+1. Import `Callout` z `react-native-maps`:
+   ```tsx
+   import MapView, { Marker, Callout } from "react-native-maps";
+   ```
+2. Wewnątrz każdego `<Marker>` dodaj `<Callout>`:
+   ```tsx
+   <Marker key={trip.id} coordinate={trip.coordinates!}>
+   	<Callout onPress={() => router.push(`/trip/${trip.id}`)}>
+   		<View style={styles.calloutContainer}>
+   			<Image source={{ uri: trip.imageUri }} style={styles.calloutImage} />
+   			<View style={styles.calloutText}>
+   				<Text style={styles.calloutTitle}>{trip.title}</Text>
+   				<Text style={styles.calloutDestination}>{trip.destination}</Text>
+   			</View>
+   		</View>
+   	</Callout>
+   </Marker>
+   ```
+3. Miniatura: 60×60 px, `borderRadius: 8`.
+4. Callout container: `flexDirection: 'row'`, `alignItems: 'center'`, `gap: 8`, max width ~200 px.
+5. `onPress` na `<Callout>` nawiguje do `trip/[id].tsx` za pomocą `router.push()`.
 
-- **Nie wywołuj `onSubmit` bezpośrednio:** zawsze `handleSubmit(onSubmit)`. Inaczej obchodzisz walidację i zapisujesz garbage.
+**⚠ Pułapka:** Na Androidzie `Callout` **nie obsługuje** interaktywnych komponentów wewnątrz (np. `TouchableOpacity`, `Pressable`). Jedyny sposób na obsłużenie tapnięcia to `onPress` bezpośrednio na `<Callout>` lub `onCalloutPress` na `<Marker>`. Nie próbuj umieszczać przycisków wewnątrz callout — nie zadziałają.
 
-- **`refine` async kosztuje:** unique-title check robi się na każdy blur tytułu — to dobrze przy 100 podróżach, ale z prawdziwym API ciężki. W produkcji rozważ debounce.
+---
 
-- **`ActivityIndicator` size i color:** domyślny size to "small". Color musi kontrastować z tłem przycisku.
+## Krok 6 - `fitToCoordinates`
 
-- **TextInput w RN nie wie nic o `onChange`:** używaj `onChangeText` (string-first API).
+**Cel:** Po załadowaniu wyjazdów automatycznie dopasuj widok mapy, żeby wszystkie markery były widoczne.
 
-- **Polskie znaki w komunikatach błędów:** są OK w stringach JS (UTF-8), w PDF, w markdown. Jedyne miejsce, gdzie czasem padają, to PPTX z Consolas — ale to nie dotyczy zadania.
+**Plik:** `app/(tabs)/map.tsx`
 
-- **`expo-router` i dynamiczne trasy:** `app/trip/edit/[id].tsx` to dynamiczna trasa. `router.push('/trip/edit/abc')` przejdzie tam i `useLocalSearchParams<{ id: string }>()` da `'abc'`.
+**Wymagania:**
+
+1. Stwórz ref do mapy:
+   ```tsx
+   const mapRef = useRef<MapView>(null);
+   ```
+2. Przekaż ref do `<MapView ref={mapRef}>`.
+3. Dodaj `useEffect` reagujący na zmiany listy wyjazdów:
+   ```tsx
+   useEffect(() => {
+   	const coords = tripsWithCoords.map((t) => t.coordinates!);
+   	if (coords.length > 0 && mapRef.current) {
+   		mapRef.current.fitToCoordinates(coords, {
+   			edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+   			animated: true,
+   		});
+   	}
+   }, [tripsWithCoords]);
+   ```
+4. **Warunek `coords.length > 0` jest obowiązkowy** - `fitToCoordinates` z pustą tablicą powoduje crash.
+5. Padding 50 px na każdą krawędź - markery przy krawędzi ekranu są trudne do tapnięcia.
+
+**⚠ Pułapka:** `fitToCoordinates` z **jednym** markerem zoomuje do maksymalnego zoomu (ulica jest widoczna, ale brak kontekstu). Rozwiązanie STRETCH: gdy `coords.length === 1`, ustaw region ręcznie z minimalną deltą (`latitudeDelta: 0.05`).
+
+---
+
+## Krok 7 - Geocoding
+
+**Cel:** Automatycznie pobierz współrzędne z nazwy destynacji przy dodawaniu wyjazdu.
+
+**Plik:** `components/AddTripForm.tsx`
+
+**Wymagania:**
+
+1. Po wypełnieniu pola `destination` w formularzu wywołaj `Location.geocodeAsync(destination)`.
+2. `geocodeAsync` zwraca tablicę `{ latitude, longitude }[]` - weź pierwszy wynik.
+3. Jeśli geocoding zwróci wyniki - zapisz `coordinates` do obiektu Trip.
+4. Jeśli geocoding nie znajdzie wyniku - nie blokuj zapisania wyjazdu, po prostu nie ustawiaj `coordinates`.
+5. Dodaj obsługę `try/catch` - geocoding wymaga połączenia z internetem.
+
+**⚠ Pułapka:** `Location.geocodeAsync` używa natywnego geocodera (Apple/Google) - nie zadziała offline. Nie wyświetlaj błędu użytkownikowi, gdy geocoding się nie uda - wyjazd i tak powinien się zapisać.
+
+---
+
+## Krok 8 - Custom marker ico
+
+**Cel:** Zamiast domyślnej pinezki wyświetl okrągłą miniaturę zdjęcia wyjazdu jako ikonę markera.
+
+**Plik:** `app/(tabs)/map.tsx`
+
+**Wymagania:**
+
+1. Zamiast domyślnego pina renderuj custom `<View>` wewnątrz `<Marker>`:
+   ```tsx
+   <Marker key={trip.id} coordinate={trip.coordinates!}>
+   	<View style={styles.customMarker}>
+   		<Image source={{ uri: trip.imageUri }} style={styles.markerImage} />
+   	</View>
+   	<Callout onPress={() => router.push(`/trip/${trip.id}`)}>
+   		{/* ... */}
+   	</Callout>
+   </Marker>
+   ```
+2. Miniatura: 40×40 px, `borderRadius: 20` (kółko), `borderWidth: 2`, `borderColor: Colors.accent`.
+3. **Ustaw `tracksViewChanges={false}`** na `<Marker>` - bez tego mapa re-renderuje marker co klatkę, co przy 10+ markerach powoduje spadek FPS.
+
+**⚠ Pułapka:** `tracksViewChanges={false}` oznacza, że zmiana `imageUri` nie zaktualizuje ikony markera. Jeśli obraz wyjazdu się zmieni, musisz tymczasowo ustawić `tracksViewChanges={true}` i wrócić do `false` po załadowaniu obrazu.
+
+---
+
+## Krok 9 - Dark mode map
+
+**Cel:** Dodaj ciemny styl mapy i przełącznik w UI.
+
+**Plik:** `app/(tabs)/map.tsx`
+
+**Wymagania:**
+
+1. Pobierz JSON ze stylem dark mode z https://mapstyle.withgoogle.com/ lub https://snazzymaps.com/.
+2. Zapisz JSON w `constants/mapStyle.ts` (export const `darkMapStyle`).
+3. Przekaż do `<MapView customMapStyle={isDark ? darkMapStyle : undefined}>`.
+4. Dodaj przełącznik (np. `Switch` lub ikonę) w prawym górnym rogu mapy do zmiany stylu.
+5. Uwaga: `customMapStyle` działa **tylko z Google Maps provider** (Android). Na iOS z Apple Maps ten prop jest ignorowany - użyj `mapType` lub `userInterfaceStyle="dark"` (iOS 13+).
+
+**⚠ Pułapka:** Styl JSON z serwisów zewnętrznych musi być tablicą obiektów `{ featureType, elementType, stylers }`. Upewnij się, że format jest poprawny - zły format = mapa bez stylu (brak błędu).
+
+---
+
+## Krok 10 - Marker clustering
+
+**Cel:** Przy dużej liczbie markerów grupuj bliskie markery w klastry.
+
+**Wymagania:**
+
+1. Zainstaluj `react-native-map-clustering`:
+   ```bash
+   npm install react-native-map-clustering
+   ```
+2. Zamień `<MapView>` na `<ClusteredMapView>` (lub wrappe `MapView` z biblioteki):
+   ```tsx
+   import MapView from "react-native-map-clustering";
+   ```
+3. Klaster wyświetla liczbę zgrupowanych markerów.
+4. Tapnięcie klastra zoomuje do regionu obejmującego zgrupowane markery.
+5. Dodaj 10+ wyjazdów z różnymi współrzędnymi, żeby przetestować clustering.
+
+**⚠ Pułapka:** `react-native-map-clustering` opakowuje `MapView` - jeśli importujesz `MapView` z tego pakietu, nie importuj go jednocześnie z `react-native-maps` w tym samym pliku. `Marker` i `Callout` nadal importujesz z `react-native-maps`.
+
+---
+
+## Krok 11 - Reverse geocoding na trip detail
+
+**Cel:** Na ekranie szczegółów wyjazdu pokaż pełny adres obok nazwy destynacji.
+
+**Plik:** `app/trip/[id].tsx`
+
+**Wymagania:**
+
+1. Jeśli wyjazd ma `coordinates`, wywołaj `Location.reverseGeocodeAsync(coordinates)` przy montowaniu.
+2. `reverseGeocodeAsync` zwraca tablicę obiektów z polami: `street`, `city`, `region`, `country`, `postalCode`.
+3. Sformatuj adres i wyświetl go pod nazwą destynacji (np. "Champs-Élysées, Paris, France").
+4. Pokaż spinner podczas ładowania adresu.
+5. Jeśli reverse geocoding się nie uda - pokaż tylko nazwę destynacji (bez błędu).
+
+**⚠ Pułapka:** `reverseGeocodeAsync` może zwrócić `null` w niektórych polach (np. `street` dla lokalizacji w terenie). Sprawdzaj każde pole przed użyciem i łącz tylko niepuste wartości.
 
 ---

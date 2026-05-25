@@ -1,59 +1,65 @@
-import {
-	Image,
-	Pressable,
-	type PressableProps,
-	StyleSheet,
-	Text,
-	View,
-} from "react-native";
-
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
+import { useTrips } from "@/context/TripsContext";
 import type { Trip } from "@/types/tripSchema";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import RatingStars from "./RatingStars";
 
-type TripCardProps = Trip &
-	PressableProps & {
-		onDelete: () => void | Promise<void>;
+type TripCardProps = {
+	trip: Trip;
+	onPress: (id: string) => void;
+};
+export const TripCard = React.memo(function TripCard({
+	trip,
+	onPress,
+}: TripCardProps) {
+	const { deleteTrip } = useTrips();
+	const handleDeleteTrip = async (id: string) => {
+		await deleteTrip(id);
 	};
 
-export default function TripCard({
-	onDelete,
-	title,
-	destination,
-	date,
-	rating,
-	imageUri,
-	galleryUris,
-	...pressableProps
-}: TripCardProps) {
 	return (
-		<Pressable {...pressableProps}>
+		<Pressable onPress={() => onPress(trip.id)}>
 			<View style={styles.card}>
-				{imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
-				{galleryUris && galleryUris.length > 0 && (
+				{trip.imageUri && (
+					<Image
+						source={{ uri: trip.imageUri }}
+						style={styles.image}
+						contentFit="cover"
+						cachePolicy="memory-disk"
+						transition={200}
+					/>
+				)}
+				{trip.galleryUris && trip.galleryUris.length > 0 && (
 					<View style={styles.galleryContainer}>
 						<Ionicons
 							name="images-outline"
 							size={14}
 							color={Colors.textPrimary}
 						/>
-						<Text style={styles.galleryCount}>{galleryUris.length}</Text>
+						<Text style={styles.galleryCount}>{trip.galleryUris.length}</Text>
 					</View>
 				)}
-				<Text style={styles.title}>{title}</Text>
-				<Text style={styles.meta}>
-					{destination} | {date}
+				<Text style={styles.title} numberOfLines={1}>
+					{trip.title}
 				</Text>
-				<RatingStars rating={rating} />
-				<Pressable onPress={onDelete} style={styles.deleteButton}>
+				<Text style={styles.meta} numberOfLines={1}>
+					{trip.destination} | {trip.date}
+				</Text>
+				<RatingStars rating={trip.rating} />
+				<Pressable
+					onPress={() => handleDeleteTrip(trip.id)}
+					style={styles.deleteButton}
+				>
 					<Text style={styles.deleteButtonText}>Usuń</Text>
 				</Pressable>
 			</View>
 		</Pressable>
 	);
-}
+});
 
 const styles = StyleSheet.create({
 	card: {
@@ -65,6 +71,7 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.2,
 		shadowRadius: 8,
 		elevation: 4,
+		overflow: "hidden",
 	},
 	galleryContainer: {
 		position: "absolute",
