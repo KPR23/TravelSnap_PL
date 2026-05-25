@@ -1,269 +1,331 @@
-# Zadanie 10 - Wydajność i obrazy
+# Zadanie 11 - Mapy i lokalizacja
 
 ## Cel
 
-Zoptymalizujesz TravelSnap pod kątem wydajności. Dostroisz FlatList
-propami wydajnościowymi, dodasz memoizację tam gdzie ma sens,
-i wymienisz domyślny komponent `Image` z React Native
-na `expo-image` z cache, transitions i blurhash placeholderami.
+Dodaj do TravelSnap nowy tab **Map** z pełnoekranową mapą, na której wyświetlisz pinezki (markery) dla każdego wyjazdu posiadającego współrzędne. Użytkownik może kliknąć marker, zobaczyć callout z miniaturą i tytułem, a następnie przejść do szczegółów wyjazdu. Mapa automatycznie dopasowuje widok do wszystkich markerów.
 
 ---
 
 ## Krok 0 - Setup
 
-Zainstaluj `expo-image`:
+**Cel:** Zainstaluj zależności i skonfiguruj Google Maps API key.
 
 ```bash
-npx expo install expo-image
+npx expo install expo-location react-native-maps
 ```
 
-Po instalacji sprawdź, że `expo-image` pojawia się w `package.json` w `dependencies`.
+**Wymagania:**
+
+1. Zainstaluj oba pakiety jednym poleceniem.
+2. Dla Androida: dodaj Google Maps API key w `app.json` (lub `app.config.ts`):
+   ```json
+   {
+   	"expo": {
+   		"android": {
+   			"config": {
+   				"googleMaps": {
+   					"apiKey": "TWOJ_GOOGLE_MAPS_API_KEY"
+   				}
+   			}
+   		}
+   	}
+   }
+   ```
+3. Dla iOS: Apple Maps działa bez klucza - nie musisz nic konfigurować.
+4. Po instalacji przebuduj aplikację: `npx expo run:android` lub `npx expo run:ios` (react-native-maps nie działa w Expo Go na Androidzie z Google provider).
+
+**⚠ Pułapka:** Google Maps API key musi być na start **unrestricted**. Restricted key = pusta mapa bez żadnego błędu w konsoli. Ogranicz klucz dopiero po potwierdzeniu, że mapa się renderuje.
 
 ---
 
-## Krok 1 - FlatList tuning w `app/(tabs)/index.tsx`
+## Krok 1 - Custom hook `useLocation`
 
-**Cel:** Wyeliminować niepotrzebne pomiary elementów listy i ograniczyć liczbę renderowanych kart.
+**Cel:** Stwórz reużywalny hook do pobierania bieżącej lokalizacji użytkownika.
 
-W pliku `app/(tabs)/index.tsx` na komponencie `<FlatList>` dodaj:
+**Plik:** `hooks/useLocation.ts`
 
-```tsx
-const CARD_HEIGHT = 120;
+**Sygnatura:**
 
-<FlatList
-	data={trips}
-	keyExtractor={(item) => item.id}
-	getItemLayout={(_, index) => ({
-		length: CARD_HEIGHT,
-		offset: CARD_HEIGHT * index,
-		index,
-	})}
-	initialNumToRender={10}
-	windowSize={5}
-	renderItem={({ item }) => <TripCard trip={item} onPress={handleTripPress} />}
-/>;
-```
+```ts
+import { LocationObject } from "expo-location";
 
-### Wymagania
-
-1. `keyExtractor` zwraca `item.id` (string).
-2. `getItemLayout` opiera się na stałej `CARD_HEIGHT` — zmierz rzeczywistą wysokość karty i dostosuj wartość.
-3. `initialNumToRender={10}` — renderuj 10 kart na start (a nie całą listę).
-4. `windowSize={5}` — renderuj 5 ekranów-worth elementów (2 przed, bieżący, 2 po).
-
-> **Pułapka:** `getItemLayout` działa poprawnie tylko gdy wszystkie elementy mają identyczną wysokość. Jeśli twoje `TripCard` zawijają tytuł na dwie linie, zmierz maksymalną wysokość i użyj jej, albo zrezygnuj z `getItemLayout`.
-
----
-
-## Krok 2 - `React.memo` na `TripCard`
-
-**Cel:** Zapobiec re-renderowi kart, których propsy się nie zmieniły.
-
-### 2a. Wrap `TripCard` w `React.memo`
-
-W `components/TripCard.tsx`:
-
-```tsx
-import React from "react";
-
-interface TripCardProps {
-	trip: Trip;
-	onPress: (id: string) => void;
+interface UseLocationResult {
+	location: LocationObject | null;
+	error: string | null;
+	loading: boolean;
 }
 
-export const TripCard = React.memo(function TripCard({
-	trip,
-	onPress,
-}: TripCardProps) {
-	// ...istniejący kod komponentu
-});
+export function useLocation(): UseLocationResult;
 ```
 
-### 2b. Stabilizuj handlery w rodzicu
+**Wymagania:**
 
-W `app/(tabs)/index.tsx`:
+1. Przy montowaniu komponentu wywołaj `Location.requestForegroundPermissionsAsync()`.
+2. Jeśli `status !== 'granted'` - ustaw `error` na komunikat opisujący brak uprawnień (np. `"Brak uprawnień do lokalizacji"`), ustaw `loading` na `false`.
+3. Jeśli uprawnienie udzielone - wywołaj `Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })`.
+4. Zapisz wynik w `location`, ustaw `loading` na `false`.
+5. Obsłuż błędy `try/catch` - przy wyjątku ustaw `error` na `e.message`.
+6. Cała logika w `useEffect` z pustą tablicą zależności `[]`.
+7. Return `{ location, error, loading }`.
 
-```tsx
-import { useCallback } from "react";
-
-const handleTripPress = useCallback(
-	(id: string) => {
-		router.push(`/trip/${id}`);
-	},
-	[router],
-);
-```
-
-### Wymagania
-
-1. `TripCard` jest eksportowane jako `React.memo(function TripCard(...))`.
-2. Handler `onPress` w rodzicu jest owrapowany w `useCallback` — bez tego `React.memo` nie ma efektu (każdy render rodzica tworzy nową referencję funkcji).
-3. Zweryfikuj w React DevTools Profiler, że `TripCard` nie re-renderuje się, gdy zmienia się stan niezwiązany z danym wyjazdem.
-
-> **Pułapka:** `React.memo` porównuje propsy płytko (shallow equality). Jeśli przekazujesz do `TripCard` obiekt tworzony inline (np. `style={{ margin: 10 }}`), memo i tak będzie re-renderować — przenieś styl do `StyleSheet.create`.
+**⚠ Pułapka:** Na emulatorze Android musisz ręcznie ustawić lokalizację: Extended Controls (…) → Location → wpisz współrzędne. Na iOS Simulator: Debug → Location → Custom Location. Bez tego `getCurrentPositionAsync` może wisieć w nieskończoność.
 
 ---
 
-## Krok 3 - Migracja na `expo-image`
+## Krok 2 - Nowy tab "Map" z `<MapView>`
 
-**Cel:** Zastąpić domyślny `Image` z React Native wydajniejszym `expo-image` z cache i transitions.
+**Cel:** Dodaj trzeci (lub czwarty) tab z pełnoekranową mapą.
 
-### 3a. `TripCard.tsx`
+**Pliki:** `app/(tabs)/map.tsx`, `app/(tabs)/_layout.tsx`
 
-```tsx
-// PRZED:
-import { Image } from "react-native";
-<Image source={{ uri: trip.imageUrl }} resizeMode="cover" />;
+**Wymagania:**
 
-// PO:
-import { Image } from "expo-image";
-<Image
-	source={{ uri: trip.imageUrl }}
-	contentFit="cover"
-	cachePolicy="memory-disk"
-	transition={200}
-	style={styles.image}
-/>;
-```
+1. W `_layout.tsx` dodaj nowy `<Tabs.Screen>` z `name="map"`, tytułem "Map" i ikoną mapy (np. `map` z Ionicons lub `map-pin`).
+2. W `map.tsx` użyj hooka `useLocation()` z kroku 1.
+3. Renderuj `<MapView>` z `react-native-maps`:
+   ```tsx
+   import MapView from "react-native-maps";
+   ```
+4. `MapView` musi mieć `style={{ flex: 1 }}` - **rodzic musi też mieć `flex: 1`**, inaczej mapa ma 0 wysokości i jest niewidoczna.
+5. Ustaw `initialRegion`:
+   - Jeśli `location` dostępny - użyj `location.coords.latitude` / `longitude` z deltą `0.1`.
+   - Jeśli brak - domyślna Warszawa: `{ latitude: 52.2297, longitude: 21.0122, latitudeDelta: 0.1, longitudeDelta: 0.1 }`.
+6. Gdy `loading === true` - pokaż spinner (`<ActivityIndicator>`).
+7. Gdy `error` - pokaż `<ErrorView>` z opisem błędu i przyciskiem "Otwórz ustawienia" wywołującym `Linking.openSettings()`.
 
-### 3b. `DestinationCard.tsx` i `CountryCard.tsx`
-
-Analogicznie - zmień import i zamień `resizeMode` na `contentFit`.
-
-### 3c. Hero image w `app/trip/[id].tsx`
-
-```tsx
-import { Image } from "expo-image";
-
-<Image
-	source={{ uri: trip.imageUrl }}
-	contentFit="cover"
-	cachePolicy="memory-disk"
-	transition={300}
-	style={styles.heroImage}
-/>;
-```
-
-### Wymagania
-
-1. Wszystkie 4 pliki: zamień import na `expo-image`.
-2. Zamień `resizeMode` → `contentFit` (wartości te same: `"cover"`, `"contain"`).
-3. Dodaj `cachePolicy="memory-disk"` i `transition={200}` (lub 300 dla hero).
-
-> **Pułapka:** `expo-image` nie ma `defaultSource`. Jeśli korzystałeś z `defaultSource` w React Native, zamień na `placeholder={{ uri: localAsset }}` lub `placeholder={{ blurhash: '...' }}`.
+**⚠ Pułapka:** `MapView` z `style={{ flex: 1 }}` w `<View>` bez `flex: 1` = mapa niewidoczna (0px wysokości). Upewnij się, że cały łańcuch rodziców ma `flex: 1`.
 
 ---
 
-## Krok 4 - Blurhash placeholder na hero image
+## Krok 3 - Rozszerzenie `Trip` o `coordinates`
 
-**Cel:** Dodać elegancki gradient placeholder zamiast pustego miejsca podczas ładowania hero image.
+**Cel:** Dodaj opcjonalne pole współrzędnych do modelu danych wyjazdu.
 
-W `app/trip/[id].tsx`:
+**Pliki:** `types/trip.ts`, `types/tripSchema.ts`
 
-```tsx
-<Image
-	source={{ uri: trip.imageUrl }}
-	placeholder={{ blurhash: "LGF5]+Yk^6#M@-5c,1J5@[or[Q6." }}
-	contentFit="cover"
-	cachePolicy="memory-disk"
-	transition={300}
-	style={styles.heroImage}
-/>
-```
+**Wymagania:**
 
-### Wymagania
+1. W `types/trip.ts` rozszerz interfejs `TripData`:
+   ```ts
+   coordinates?: {
+     latitude: number;
+     longitude: number;
+   };
+   ```
+2. W `types/tripSchema.ts` dodaj opcjonalne pole do Zod schema:
+   ```ts
+   coordinates: z.object({
+     latitude: z.number(),
+     longitude: z.number(),
+   }).optional(),
+   ```
+3. Do testów ręcznie dodaj współrzędne do 2–3 istniejących wyjazdów w danych testowych lub w `TripContext` (np. Paryż: `48.8566, 2.3522`, Tokio: `35.6762, 139.6503`, Rzym: `41.9028, 12.4964`).
+4. Pole `coordinates` jest opcjonalne — nie każdy wyjazd musi je mieć.
 
-1. Dodaj prop `placeholder` z obiektem `{ blurhash: '...' }`.
-2. Wygeneruj swój blurhash na https://blurha.sh lub użyj przykładowego stringa.
-3. Sprawdź, że przed załadowaniem obrazu widać kolorowy gradient, a po załadowaniu — płynne przejście (transition).
-
-> **Pułapka:** Blurhash to string ~20–30 znaków — nie wymaga fetcha, jest wkompilowany w JS bundle. Nie generuj go dynamicznie — podaj statycznie w kodzie.
-
----
-
-## Krok 5 - `useMemo` na sortowaniu listy
-
-**Cel:** Memoizować kosztowne obliczenie, które nie powinno się powtarzać przy każdym re-renderze.
-
-W `app/(tabs)/index.tsx`:
-
-```tsx
-import { useMemo } from "react";
-
-const sortedTrips = useMemo(() => {
-	return [...trips].sort((a, b) => b.rating - a.rating);
-}, [trips]);
-```
-
-### Wymagania
-
-1. Użyj `useMemo` do memoizacji sortowanej/filtrowanej listy.
-2. Dep array zawiera `[trips]` — przelicza się tylko gdy zmieni się tablica wyjazdów.
-3. Przekaż `sortedTrips` (nie `trips`) do `<FlatList data={...}>`.
-
-> **Pułapka:** Nie opakowuj w `useMemo` prostych operacji jak `trips.length` czy `x + 1`. Hook ma narzut (alokacja closure, dep-check, GC) — dla taniej operacji kosztuje więcej niż zysk.
+**⚠ Pułapka:** Jeśli używasz AsyncStorage do persystencji wyjazdów, stare dane nie będą miały pola `coordinates`. Twój kod musi to obsługiwać - zawsze filtruj `.filter(t => t.coordinates)` przed mapowaniem na markery.
 
 ---
 
-## Krok 6 - Dodatkowe propsy FlatList
+## Krok 4 - Markery wyjazdów na mapie
 
-**Cel:** Dostrój `removeClippedSubviews` i `maxToRenderPerBatch` dla lepszego RAM i fill-rate.
+**Cel:** Wyświetl pinezki na mapie dla każdego wyjazdu z ustawionymi współrzędnymi.
 
-```tsx
-<FlatList
-	data={sortedTrips}
-	keyExtractor={(item) => item.id}
-	getItemLayout={(_, index) => ({
-		length: CARD_HEIGHT,
-		offset: CARD_HEIGHT * index,
-		index,
-	})}
-	initialNumToRender={10}
-	maxToRenderPerBatch={8}
-	windowSize={5}
-	removeClippedSubviews={true}
-	renderItem={({ item }) => <TripCard trip={item} onPress={handleTripPress} />}
-/>
-```
+**Plik:** `app/(tabs)/map.tsx`
 
-### Wymagania
+**Wymagania:**
 
-1. `removeClippedSubviews={true}` — odmontowuje elementy poza viewport.
-2. `maxToRenderPerBatch={8}` — renderuj 8 elementów per batch przy scrollowaniu.
-3. Przetestuj na fizycznym urządzeniu (emulator nie oddaje prawdziwej wydajności).
+1. Pobierz listę wyjazdów z `TripContext` (`useTrips()`).
+2. Przefiltruj wyjazdy posiadające `coordinates`:
+   ```tsx
+   const tripsWithCoords = useMemo(
+   	() => trips.filter((t) => t.coordinates),
+   	[trips],
+   );
+   ```
+3. Renderuj `<Marker>` dla każdego wyjazdu:
+   ```tsx
+   {
+   	tripsWithCoords.map((trip) => (
+   		<Marker
+   			key={trip.id}
+   			coordinate={trip.coordinates!}
+   			title={trip.title}
+   			description={trip.destination}
+   		/>
+   	));
+   }
+   ```
+4. Każdy marker wyświetla domyślną pinezkę z `title` i `description` widocznymi po tapnięciu.
+5. Użyj `useMemo` na filtrowanej liście, żeby uniknąć zbędnych rekalkulacji.
 
-> **Pułapka:** `removeClippedSubviews` na iOS może powodować artefakty wizualne. Jeśli zauważysz problemy — wyłącz na iOS: `removeClippedSubviews={Platform.OS === 'android'}`.
-
----
-
-## Krok 7 - Pagination listy
-
-**Cel:** Zasymulować dociąganie danych przy scrollowaniu.
-
-1. Stwórz `utils/dummyTrips.ts` — funkcja generująca 200 dummy trips.
-2. Trzymaj w stanie `visibleTrips` — pierwsze 20.
-3. Dodaj do `FlatList`:
-
-```tsx
-onEndReached={loadMore}
-onEndReachedThreshold={0.5}
-ListFooterComponent={isLoadingMore ? <ActivityIndicator /> : null}
-```
-
-4. `loadMore` dokłada kolejne 20 elementów z opóźnieniem 500ms (`setTimeout`).
-
-> **Pułapka:** `onEndReached` może wystrzelić wielokrotnie — użyj flagi `isLoadingMore` żeby zignorować kolejne wywołania podczas ładowania.
+**⚠ Pułapka:** Nie zapomnij o `key={trip.id}` na `<Marker>`. Bez unikalnego klucza React nie potrafi efektywnie aktualizować markerów i możesz zobaczyć ghost-markery po usunięciu wyjazdu.
 
 ---
 
-## Krok 8 - Sesja profilowania z React DevTools
+## Krok 5 - Custom Callout z miniaturą
 
-**Cel:** Zmierzyć faktyczny efekt optymalizacji.
+**Cel:** Po kliknięciu markera pokaż callout z miniaturą zdjęcia, tytułem i destynacją. Kliknięcie callout nawiguje do szczegółów wyjazdu.
 
-1. Otwórz React DevTools → zakładka Profiler.
-2. Nagraj sesję: otwórz listę, przewiń 3 razy, wróć.
-3. Sprawdź: ile razy re-renderowały się `TripCard`, czas renderowania listy, czy `useMemo` zapobiega przeliczaniu.
+**Plik:** `app/(tabs)/map.tsx`
 
-> **Pułapka:** Profiler w dev mode jest wolniejszy niż produkcyjny build. Liczy się różnica relatywna (przed vs po), nie absolutne milisekundy.
+**Wymagania:**
+
+1. Import `Callout` z `react-native-maps`:
+   ```tsx
+   import MapView, { Marker, Callout } from "react-native-maps";
+   ```
+2. Wewnątrz każdego `<Marker>` dodaj `<Callout>`:
+   ```tsx
+   <Marker key={trip.id} coordinate={trip.coordinates!}>
+   	<Callout onPress={() => router.push(`/trip/${trip.id}`)}>
+   		<View style={styles.calloutContainer}>
+   			<Image source={{ uri: trip.imageUri }} style={styles.calloutImage} />
+   			<View style={styles.calloutText}>
+   				<Text style={styles.calloutTitle}>{trip.title}</Text>
+   				<Text style={styles.calloutDestination}>{trip.destination}</Text>
+   			</View>
+   		</View>
+   	</Callout>
+   </Marker>
+   ```
+3. Miniatura: 60×60 px, `borderRadius: 8`.
+4. Callout container: `flexDirection: 'row'`, `alignItems: 'center'`, `gap: 8`, max width ~200 px.
+5. `onPress` na `<Callout>` nawiguje do `trip/[id].tsx` za pomocą `router.push()`.
+
+**⚠ Pułapka:** Na Androidzie `Callout` **nie obsługuje** interaktywnych komponentów wewnątrz (np. `TouchableOpacity`, `Pressable`). Jedyny sposób na obsłużenie tapnięcia to `onPress` bezpośrednio na `<Callout>` lub `onCalloutPress` na `<Marker>`. Nie próbuj umieszczać przycisków wewnątrz callout — nie zadziałają.
+
+---
+
+## Krok 6 - `fitToCoordinates`
+
+**Cel:** Po załadowaniu wyjazdów automatycznie dopasuj widok mapy, żeby wszystkie markery były widoczne.
+
+**Plik:** `app/(tabs)/map.tsx`
+
+**Wymagania:**
+
+1. Stwórz ref do mapy:
+   ```tsx
+   const mapRef = useRef<MapView>(null);
+   ```
+2. Przekaż ref do `<MapView ref={mapRef}>`.
+3. Dodaj `useEffect` reagujący na zmiany listy wyjazdów:
+   ```tsx
+   useEffect(() => {
+   	const coords = tripsWithCoords.map((t) => t.coordinates!);
+   	if (coords.length > 0 && mapRef.current) {
+   		mapRef.current.fitToCoordinates(coords, {
+   			edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+   			animated: true,
+   		});
+   	}
+   }, [tripsWithCoords]);
+   ```
+4. **Warunek `coords.length > 0` jest obowiązkowy** - `fitToCoordinates` z pustą tablicą powoduje crash.
+5. Padding 50 px na każdą krawędź - markery przy krawędzi ekranu są trudne do tapnięcia.
+
+**⚠ Pułapka:** `fitToCoordinates` z **jednym** markerem zoomuje do maksymalnego zoomu (ulica jest widoczna, ale brak kontekstu). Rozwiązanie STRETCH: gdy `coords.length === 1`, ustaw region ręcznie z minimalną deltą (`latitudeDelta: 0.05`).
+
+---
+
+## Krok 7 - Geocoding
+
+**Cel:** Automatycznie pobierz współrzędne z nazwy destynacji przy dodawaniu wyjazdu.
+
+**Plik:** `components/AddTripForm.tsx`
+
+**Wymagania:**
+
+1. Po wypełnieniu pola `destination` w formularzu wywołaj `Location.geocodeAsync(destination)`.
+2. `geocodeAsync` zwraca tablicę `{ latitude, longitude }[]` - weź pierwszy wynik.
+3. Jeśli geocoding zwróci wyniki - zapisz `coordinates` do obiektu Trip.
+4. Jeśli geocoding nie znajdzie wyniku - nie blokuj zapisania wyjazdu, po prostu nie ustawiaj `coordinates`.
+5. Dodaj obsługę `try/catch` - geocoding wymaga połączenia z internetem.
+
+**⚠ Pułapka:** `Location.geocodeAsync` używa natywnego geocodera (Apple/Google) - nie zadziała offline. Nie wyświetlaj błędu użytkownikowi, gdy geocoding się nie uda - wyjazd i tak powinien się zapisać.
+
+---
+
+## Krok 8 - Custom marker ico
+
+**Cel:** Zamiast domyślnej pinezki wyświetl okrągłą miniaturę zdjęcia wyjazdu jako ikonę markera.
+
+**Plik:** `app/(tabs)/map.tsx`
+
+**Wymagania:**
+
+1. Zamiast domyślnego pina renderuj custom `<View>` wewnątrz `<Marker>`:
+   ```tsx
+   <Marker key={trip.id} coordinate={trip.coordinates!}>
+   	<View style={styles.customMarker}>
+   		<Image source={{ uri: trip.imageUri }} style={styles.markerImage} />
+   	</View>
+   	<Callout onPress={() => router.push(`/trip/${trip.id}`)}>
+   		{/* ... */}
+   	</Callout>
+   </Marker>
+   ```
+2. Miniatura: 40×40 px, `borderRadius: 20` (kółko), `borderWidth: 2`, `borderColor: Colors.accent`.
+3. **Ustaw `tracksViewChanges={false}`** na `<Marker>` - bez tego mapa re-renderuje marker co klatkę, co przy 10+ markerach powoduje spadek FPS.
+
+**⚠ Pułapka:** `tracksViewChanges={false}` oznacza, że zmiana `imageUri` nie zaktualizuje ikony markera. Jeśli obraz wyjazdu się zmieni, musisz tymczasowo ustawić `tracksViewChanges={true}` i wrócić do `false` po załadowaniu obrazu.
+
+---
+
+## Krok 9 - Dark mode map
+
+**Cel:** Dodaj ciemny styl mapy i przełącznik w UI.
+
+**Plik:** `app/(tabs)/map.tsx`
+
+**Wymagania:**
+
+1. Pobierz JSON ze stylem dark mode z https://mapstyle.withgoogle.com/ lub https://snazzymaps.com/.
+2. Zapisz JSON w `constants/mapStyle.ts` (export const `darkMapStyle`).
+3. Przekaż do `<MapView customMapStyle={isDark ? darkMapStyle : undefined}>`.
+4. Dodaj przełącznik (np. `Switch` lub ikonę) w prawym górnym rogu mapy do zmiany stylu.
+5. Uwaga: `customMapStyle` działa **tylko z Google Maps provider** (Android). Na iOS z Apple Maps ten prop jest ignorowany - użyj `mapType` lub `userInterfaceStyle="dark"` (iOS 13+).
+
+**⚠ Pułapka:** Styl JSON z serwisów zewnętrznych musi być tablicą obiektów `{ featureType, elementType, stylers }`. Upewnij się, że format jest poprawny - zły format = mapa bez stylu (brak błędu).
+
+---
+
+## Krok 10 - Marker clustering
+
+**Cel:** Przy dużej liczbie markerów grupuj bliskie markery w klastry.
+
+**Wymagania:**
+
+1. Zainstaluj `react-native-map-clustering`:
+   ```bash
+   npm install react-native-map-clustering
+   ```
+2. Zamień `<MapView>` na `<ClusteredMapView>` (lub wrappe `MapView` z biblioteki):
+   ```tsx
+   import MapView from "react-native-map-clustering";
+   ```
+3. Klaster wyświetla liczbę zgrupowanych markerów.
+4. Tapnięcie klastra zoomuje do regionu obejmującego zgrupowane markery.
+5. Dodaj 10+ wyjazdów z różnymi współrzędnymi, żeby przetestować clustering.
+
+**⚠ Pułapka:** `react-native-map-clustering` opakowuje `MapView` - jeśli importujesz `MapView` z tego pakietu, nie importuj go jednocześnie z `react-native-maps` w tym samym pliku. `Marker` i `Callout` nadal importujesz z `react-native-maps`.
+
+---
+
+## Krok 11 - Reverse geocoding na trip detail
+
+**Cel:** Na ekranie szczegółów wyjazdu pokaż pełny adres obok nazwy destynacji.
+
+**Plik:** `app/trip/[id].tsx`
+
+**Wymagania:**
+
+1. Jeśli wyjazd ma `coordinates`, wywołaj `Location.reverseGeocodeAsync(coordinates)` przy montowaniu.
+2. `reverseGeocodeAsync` zwraca tablicę obiektów z polami: `street`, `city`, `region`, `country`, `postalCode`.
+3. Sformatuj adres i wyświetl go pod nazwą destynacji (np. "Champs-Élysées, Paris, France").
+4. Pokaż spinner podczas ładowania adresu.
+5. Jeśli reverse geocoding się nie uda - pokaż tylko nazwę destynacji (bez błędu).
+
+**⚠ Pułapka:** `reverseGeocodeAsync` może zwrócić `null` w niektórych polach (np. `street` dla lokalizacji w terenie). Sprawdzaj każde pole przed użyciem i łącz tylko niepuste wartości.
 
 ---
