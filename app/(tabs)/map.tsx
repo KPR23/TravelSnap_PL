@@ -72,7 +72,22 @@ export default function MapScreen() {
 					}}
 				>
 					{tripsWithCoords.map((trip) => (
-						<Marker key={trip.id} coordinate={trip.coordinates!}>
+						<Marker
+							key={trip.id}
+							coordinate={trip.coordinates!}
+							tracksViewChanges={false}
+						>
+							<View style={styles.customMarker}>
+								{trip.imageUri ? (
+									<Image
+										source={{ uri: trip.imageUri }}
+										style={styles.markerImage}
+										contentFit="cover"
+									/>
+								) : (
+									<View style={styles.markerPlaceholder} />
+								)}
+							</View>
 							<Callout onPress={() => router.push(`/trip/${trip.id}`)}>
 								<View style={styles.calloutContainer}>
 									{trip.imageUri ? (
@@ -123,5 +138,27 @@ const styles = StyleSheet.create({
 		width: 60,
 		height: 60,
 		borderRadius: 8,
+	},
+	customMarker: {
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+		borderWidth: 2,
+		borderColor: Colors.accent,
+		overflow: "hidden",
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: Colors.card,
+	},
+	markerImage: {
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+	},
+	markerPlaceholder: {
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+		backgroundColor: Colors.inputBg,
 	},
 });
