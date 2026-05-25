@@ -2,9 +2,18 @@ import { ErrorView } from "@/components/ErrorView";
 import { Colors } from "@/constants/Colors";
 import { useTrips } from "@/context/TripsContext";
 import { useLocation } from "@/hooks/useLocation";
+import { Image } from "expo-image";
+import { router } from "expo-router";
 import { useMemo } from "react";
-import { ActivityIndicator, Button, Linking, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import {
+	ActivityIndicator,
+	Button,
+	Linking,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
+import MapView, { Callout, Marker } from "react-native-maps";
 
 export default function MapScreen() {
 	const { location, error, loading } = useLocation();
@@ -40,15 +49,59 @@ export default function MapScreen() {
 					}}
 				>
 					{tripsWithCoords.map((trip) => (
-						<Marker
-							key={trip.id}
-							coordinate={trip.coordinates!}
-							title={trip.title}
-							description={trip.destination}
-						/>
+						<Marker key={trip.id} coordinate={trip.coordinates!}>
+							<Callout onPress={() => router.push(`/trip/${trip.id}`)}>
+								<View style={styles.calloutContainer}>
+									{trip.imageUri ? (
+										<Image
+											source={{ uri: trip.imageUri }}
+											style={styles.calloutImage}
+											contentFit="cover"
+										/>
+									) : null}
+									<View style={styles.calloutText}>
+										<Text style={styles.calloutTitle} numberOfLines={1}>
+											{trip.title}
+										</Text>
+										<Text
+											style={styles.calloutDestination}
+											numberOfLines={1}
+										>
+											{trip.destination}
+										</Text>
+									</View>
+								</View>
+							</Callout>
+						</Marker>
 					))}
 				</MapView>
 			)}
 		</View>
 	);
 }
+
+const styles = StyleSheet.create({
+	calloutContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		maxWidth: 200,
+		padding: 8,
+	},
+	calloutText: {
+		flex: 1,
+	},
+	calloutTitle: {
+		fontSize: 14,
+		fontWeight: "bold",
+	},
+	calloutDestination: {
+		fontSize: 12,
+		color: Colors.textSecondary,
+	},
+	calloutImage: {
+		width: 60,
+		height: 60,
+		borderRadius: 8,
+	},
+});
