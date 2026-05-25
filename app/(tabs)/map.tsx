@@ -4,7 +4,7 @@ import { useTrips } from "@/context/TripsContext";
 import { useLocation } from "@/hooks/useLocation";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
 	ActivityIndicator,
 	Button,
@@ -19,10 +19,32 @@ export default function MapScreen() {
 	const { location, error, loading } = useLocation();
 	const { trips } = useTrips();
 
+	const mapRef = useRef<MapView>(null);
+
 	const tripsWithCoords = useMemo(
 		() => trips.filter((t) => t.coordinates),
 		[trips],
 	);
+
+	useEffect(() => {
+		const coords = tripsWithCoords.map((t) => t.coordinates!);
+		if (coords.length === 0 || !mapRef.current) return;
+		if (coords.length === 1) {
+			mapRef.current.animateToRegion(
+				{
+					...coords[0],
+					latitudeDelta: 0.05,
+					longitudeDelta: 0.05,
+				},
+				1000,
+			);
+			return;
+		}
+		mapRef.current.fitToCoordinates(coords, {
+			edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+			animated: true,
+		});
+	}, [tripsWithCoords]);
 
 	return (
 		<View style={{ flex: 1 }}>
@@ -41,6 +63,7 @@ export default function MapScreen() {
 			) : (
 				<MapView
 					style={{ flex: 1 }}
+					ref={mapRef}
 					initialRegion={{
 						latitude: location?.coords.latitude ?? 52.2297,
 						longitude: location?.coords.longitude ?? 21.0122,
@@ -63,10 +86,7 @@ export default function MapScreen() {
 										<Text style={styles.calloutTitle} numberOfLines={1}>
 											{trip.title}
 										</Text>
-										<Text
-											style={styles.calloutDestination}
-											numberOfLines={1}
-										>
+										<Text style={styles.calloutDestination} numberOfLines={1}>
 											{trip.destination}
 										</Text>
 									</View>
