@@ -1,24 +1,33 @@
 import { ErrorView } from "@/components/ErrorView";
 import { Colors } from "@/constants/Colors";
+import { darkMapStyle } from "@/constants/mapStyle";
+import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
 import { useLocation } from "@/hooks/useLocation";
-import { Image } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import { router } from "expo-router";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Button,
+	Image,
 	Linking,
+	Platform,
+	Pressable,
 	StyleSheet,
 	Text,
 	View,
 } from "react-native";
+import ClusteredMapView from "react-native-map-clustering";
 import MapView, { Callout, Marker } from "react-native-maps";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function MapScreen() {
 	const { location, error, loading } = useLocation();
 	const { trips } = useTrips();
-
+	const insets = useSafeAreaInsets();
+	const [isDarkMap, setIsDarkMap] = useState(false);
 	const mapRef = useRef<MapView>(null);
 
 	const tripsWithCoords = useMemo(
@@ -61,78 +70,136 @@ export default function MapScreen() {
 					/>
 				</View>
 			) : (
-				<MapView
-					style={{ flex: 1 }}
-					ref={mapRef}
-					initialRegion={{
-						latitude: location?.coords.latitude ?? 52.2297,
-						longitude: location?.coords.longitude ?? 21.0122,
-						latitudeDelta: 0.1,
-						longitudeDelta: 0.1,
-					}}
-				>
-					{tripsWithCoords.map((trip) => (
-						<Marker
-							key={trip.id}
-							coordinate={trip.coordinates!}
-							tracksViewChanges={false}
-						>
-							<View style={styles.customMarker}>
-								{trip.imageUri ? (
-									<Image
-										source={{ uri: trip.imageUri }}
-										style={styles.markerImage}
-										contentFit="cover"
-									/>
-								) : (
-									<View style={styles.markerPlaceholder} />
-								)}
-							</View>
-							<Callout onPress={() => router.push(`/trip/${trip.id}`)}>
-								<View style={styles.calloutContainer}>
+				<View style={styles.mapContainer}>
+					<ClusteredMapView
+						style={styles.map}
+						ref={mapRef}
+						clusterColor={Colors.primary}
+						clusterTextColor={Colors.background}
+						initialRegion={{
+							latitude: location?.coords.latitude ?? 52.2297,
+							longitude: location?.coords.longitude ?? 21.0122,
+							latitudeDelta: 0.1,
+							longitudeDelta: 0.1,
+						}}
+						customMapStyle={isDarkMap ? darkMapStyle : undefined}
+						userInterfaceStyle={isDarkMap ? "dark" : "light"}
+					>
+						{tripsWithCoords.map((trip) => (
+							<Marker
+								key={trip.id}
+								coordinate={trip.coordinates!}
+								tracksViewChanges={false}
+							>
+								<View style={styles.customMarker}>
 									{trip.imageUri ? (
-										<Image
+										<ExpoImage
 											source={{ uri: trip.imageUri }}
-											style={styles.calloutImage}
+											style={styles.markerImage}
 											contentFit="cover"
 										/>
-									) : null}
-									<View style={styles.calloutText}>
-										<Text style={styles.calloutTitle} numberOfLines={1}>
-											{trip.title}
-										</Text>
-										<Text style={styles.calloutDestination} numberOfLines={1}>
-											{trip.destination}
-										</Text>
-									</View>
+									) : (
+										<View style={styles.markerPlaceholder} />
+									)}
 								</View>
-							</Callout>
-						</Marker>
-					))}
-				</MapView>
+								<Callout
+									tooltip
+									onPress={() => router.push(`/trip/${trip.id}`)}
+								>
+									<View style={styles.calloutContainer}>
+										{trip.imageUri ? (
+											<Image
+												source={{ uri: trip.imageUri }}
+												style={styles.calloutImage}
+											/>
+										) : null}
+										<View style={styles.calloutText}>
+											<Text style={styles.calloutTitle} numberOfLines={1}>
+												{trip.title}
+											</Text>
+											<Text style={styles.calloutDestination} numberOfLines={1}>
+												{trip.destination}
+											</Text>
+										</View>
+									</View>
+								</Callout>
+							</Marker>
+						))}
+					</ClusteredMapView>
+					<Pressable
+						style={[styles.darkModeToggle, { top: insets.top + Spacing.sm }]}
+						onPress={() => setIsDarkMap((prev) => !prev)}
+						accessibilityRole="switch"
+						accessibilityState={{ checked: isDarkMap }}
+						accessibilityLabel={
+							isDarkMap ? "Wyłącz ciemny styl mapy" : "Włącz ciemny styl mapy"
+						}
+					>
+						<Ionicons
+							name={isDarkMap ? "sunny" : "moon"}
+							size={22}
+							color={Colors.textPrimary}
+						/>
+					</Pressable>
+				</View>
 			)}
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
+	mapContainer: {
+		flex: 1,
+	},
+	map: {
+		flex: 1,
+	},
+	darkModeToggle: {
+		position: "absolute",
+		right: Spacing.md,
+		width: 44,
+		height: 44,
+		borderRadius: 22,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: Colors.card,
+		borderWidth: 1,
+		borderColor: Colors.border,
+		...Platform.select({
+			ios: {
+				shadowColor: "#000",
+				shadowOffset: { width: 0, height: 2 },
+				shadowOpacity: 0.25,
+				shadowRadius: 4,
+			},
+			android: {
+				elevation: 4,
+			},
+		}),
+	},
 	calloutContainer: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: 8,
-		maxWidth: 200,
+		width: 200,
 		padding: 8,
+		backgroundColor: "#FFFFFF",
+		borderRadius: 8,
+		borderWidth: 1,
+		borderColor: "#E0E0E0",
 	},
 	calloutText: {
-		flex: 1,
+		flexShrink: 1,
+		flexGrow: 1,
 	},
 	calloutTitle: {
 		fontSize: 14,
 		fontWeight: "bold",
+		color: "#1A1A1A",
 	},
 	calloutDestination: {
 		fontSize: 12,
-		color: Colors.textSecondary,
+		color: "#666666",
 	},
 	calloutImage: {
 		width: 60,
