@@ -6,9 +6,13 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
 import { extractCountry } from "@/utils/extractCountry";
+import { formatGeocodedAddress } from "@/utils/formatGeocodedAddress";
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
+	ActivityIndicator,
 	Alert,
 	Pressable,
 	ScrollView,
@@ -25,11 +29,52 @@ export default function TripDetailScreen() {
 	const trip = getTripById(id);
 	const isFavorite = !!trip?.isFavorite;
 	const parsedRating = trip?.rating ?? 0;
+	const [formattedAddress, setFormattedAddress] = useState<string | null>(null);
+	const [addressLoading, setAddressLoading] = useState(false);
 	const galleryCount = trip
 		? Array.from(
 				new Set([trip.imageUri, ...(trip.galleryUris ?? [])].filter(Boolean)),
 			).length
 		: 0;
+
+	useEffect(() => {
+		if (!trip?.coordinates) {
+			setFormattedAddress(null);
+			setAddressLoading(false);
+			return;
+		}
+
+		let cancelled = false;
+
+		const loadAddress = async () => {
+			setAddressLoading(true);
+			setFormattedAddress(null);
+
+			try {
+				const results = await Location.reverseGeocodeAsync(trip.coordinates!);
+				if (cancelled) return;
+
+				const address = results[0];
+				if (address) {
+					const formatted = formatGeocodedAddress(address);
+					if (formatted) {
+						setFormattedAddress(formatted);
+					}
+				}
+			} catch {
+			} finally {
+				if (!cancelled) {
+					setAddressLoading(false);
+				}
+			}
+		};
+
+		void loadAddress();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [trip?.coordinates, trip?.id]);
 
 	const handleToggleFavorite = async () => {
 		await toggleFavorite(id);
@@ -133,13 +178,25 @@ export default function TripDetailScreen() {
 							</Pressable>
 						</Link>
 						<Text style={styles.title}>{trip.title}</Text>
-						<View style={styles.row}>
-							<Ionicons
-								name="location-outline"
-								size={16}
-								color={Colors.textSecondary}
-							/>
-							<Text style={styles.meta}>{trip.destination}</Text>
+						<View style={styles.locationBlock}>
+							<View style={styles.row}>
+								<Ionicons
+									name="location-outline"
+									size={16}
+									color={Colors.textSecondary}
+								/>
+								<Text style={styles.meta}>{trip.destination}</Text>
+							</View>
+							{trip.coordinates && addressLoading ? (
+								<ActivityIndicator
+									size="small"
+									color={Colors.primary}
+									style={styles.addressSpinner}
+								/>
+							) : null}
+							{formattedAddress ? (
+								<Text style={styles.address}>{formattedAddress}</Text>
+							) : null}
 						</View>
 						<View style={styles.row}>
 							<Ionicons
@@ -227,6 +284,17 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: Spacing.xs,
+	},
+	locationBlock: {
+		gap: Spacing.xs,
+	},
+	addressSpinner: {
+		marginLeft: 24,
+	},
+	address: {
+		marginLeft: 24,
+		fontSize: 13,
+		color: Colors.textSecondary,
 	},
 	meta: {
 		fontSize: 14,

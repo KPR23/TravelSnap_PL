@@ -93,16 +93,19 @@ export default function TripForm({
 		mode: "onBlur",
 	});
 
-	usePreventRemove(isDirty && !submittedRef.current && !isSubmitting, ({ data }) => {
-		Alert.alert("Odrzucić zmiany?", "Masz niezapisane zmiany. Odrzucić je?", [
-			{ text: "Zostań", style: "cancel" },
-			{
-				text: "Odrzuć",
-				style: "destructive",
-				onPress: () => navigation.dispatch(data.action),
-			},
-		]);
-	});
+	usePreventRemove(
+		isDirty && !submittedRef.current && !isSubmitting,
+		({ data }) => {
+			Alert.alert("Odrzucić zmiany?", "Masz niezapisane zmiany. Odrzucić je?", [
+				{ text: "Zostań", style: "cancel" },
+				{
+					text: "Odrzuć",
+					style: "destructive",
+					onPress: () => navigation.dispatch(data.action),
+				},
+			]);
+		},
+	);
 
 	const imageUri = watch("imageUri");
 	const showAllFields = !isWizard;
@@ -282,9 +285,7 @@ export default function TripForm({
 													fieldState.error && styles.inputError,
 												]}
 												value={value}
-												onChangeText={(text) =>
-													onChange(formatDateInput(text))
-												}
+												onChangeText={(text) => onChange(formatDateInput(text))}
 												onBlur={onBlur}
 												keyboardType="numeric"
 												placeholder="YYYY-MM"
