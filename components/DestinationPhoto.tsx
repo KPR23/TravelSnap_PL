@@ -1,18 +1,14 @@
-import { ErrorView } from "@/components/ErrorView";
 import { UNSPLASH_ACCESS_KEY, UNSPLASH_BASE_URL } from "@/constants/api";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useFetch } from "@/hooks/useFetch";
 import type { UnsplashResponse } from "@/types/unsplash";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useMemo } from "react";
-import {
-	ActivityIndicator,
-	Image,
-	StyleSheet,
-	Text,
-	View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+
+const HERO_BLURHASH = "LGF5]+Yk^6#M@-5c,1J5@[or[Q6.";
 
 interface DestinationPhotoProps {
 	city: string;
@@ -31,44 +27,47 @@ export function DestinationPhoto({ city, fallbackUri }: DestinationPhotoProps) {
 		}),
 		[],
 	);
-	const {
-		data: photoData,
-		loading: photoLoading,
-		error: photoError,
-		refetch,
-	} = useFetch<UnsplashResponse>(photoUrl, photoRequestInit);
-	const heroUri = photoData?.results?.[0]?.urls?.regular ?? fallbackUri;
+	const { data: photoData, loading: photoLoading } = useFetch<UnsplashResponse>(
+		photoUrl,
+		photoRequestInit,
+	);
+
+	const unsplashUri = photoData?.results?.[0]?.urls?.regular;
 	const photoAuthor = photoData?.results?.[0]?.user?.name;
+
+	const heroUri = photoLoading ? null : (unsplashUri ?? fallbackUri);
+	const showAttribution = !photoLoading && !!unsplashUri && !!photoAuthor;
 
 	return (
 		<View>
 			<View style={styles.heroContainer}>
-				{heroUri ? (
+				{photoLoading ? (
+					<Image
+						style={styles.image}
+						placeholder={{ blurhash: HERO_BLURHASH }}
+						contentFit="cover"
+					/>
+				) : heroUri ? (
 					<Image
 						source={{ uri: heroUri }}
 						style={styles.image}
-						resizeMode="cover"
+						placeholder={{ blurhash: HERO_BLURHASH }}
+						contentFit="cover"
+						cachePolicy="memory-disk"
+						transition={300}
 					/>
-				) : photoError ? (
-					<View style={styles.errorContainer}>
-						<ErrorView
-							message="Nie udało się załadować zdjęcia"
-							onRetry={refetch}
-						/>
-					</View>
 				) : (
 					<View style={styles.placeholder}>
-						<Ionicons name="image-outline" size={64} color={Colors.placeholder} />
+						<Ionicons
+							name="image-outline"
+							size={64}
+							color={Colors.placeholder}
+						/>
 						<Text style={styles.placeholderText}>Brak zdjęcia</Text>
 					</View>
 				)}
-				{photoLoading ? (
-					<View style={styles.loadingOverlay}>
-						<ActivityIndicator color={Colors.primary} />
-					</View>
-				) : null}
 			</View>
-			{photoAuthor ? (
+			{showAttribution ? (
 				<Text style={styles.photoAttribution}>
 					Photo by {photoAuthor} on Unsplash
 				</Text>
@@ -88,13 +87,6 @@ const styles = StyleSheet.create({
 		height: 250,
 		borderRadius: Spacing.sm,
 	},
-	loadingOverlay: {
-		...StyleSheet.absoluteFillObject,
-		alignItems: "center",
-		justifyContent: "center",
-		borderRadius: Spacing.sm,
-		backgroundColor: "rgba(15, 26, 46, 0.35)",
-	},
 	photoAttribution: {
 		fontSize: 12,
 		color: Colors.textSecondary,
@@ -108,12 +100,6 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		gap: Spacing.sm,
 		borderRadius: Spacing.sm,
-		backgroundColor: Colors.card,
-	},
-	errorContainer: {
-		height: 250,
-		borderRadius: Spacing.sm,
-		overflow: "hidden",
 		backgroundColor: Colors.card,
 	},
 	placeholderText: {

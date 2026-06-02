@@ -3,8 +3,9 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useFetch } from "@/hooks/useFetch";
 import { Country } from "@/types/country";
+import { Image } from "expo-image";
 import { JSX } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 interface CountryCardProps {
 	countryName: string;
@@ -33,13 +34,17 @@ export function CountryCard({
 	const currency = Object.values(country.currencies ?? {})[0];
 	const flag = country.flags.png;
 	const capital = country.capital?.[0] ?? "—";
-	const currencyText = currency
-		? `${currency.name} (${currency.symbol})`
-		: "—";
+	const currencyText = currency ? `${currency.name} (${currency.symbol})` : "—";
 
 	return (
 		<View style={styles.container}>
-			<Image source={{ uri: flag }} style={styles.flag} resizeMode="cover" />
+			<Image
+				source={{ uri: flag }}
+				style={styles.flag}
+				contentFit="cover"
+				cachePolicy="memory-disk"
+				transition={200}
+			/>
 			<View style={styles.textContainer}>
 				<Text style={styles.name}>{name}</Text>
 				<Text style={styles.meta}>Stolica: {capital}</Text>
