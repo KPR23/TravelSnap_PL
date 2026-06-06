@@ -14,7 +14,7 @@ import {
 	Pressable,
 	StyleSheet,
 } from "react-native";
-import Animated from "react-native-reanimated";
+import Animated, { LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 20;
@@ -80,6 +80,7 @@ export default function HomeScreen() {
 				removeClippedSubviews={Platform.OS === "android"}
 				onEndReached={loadMore}
 				onEndReachedThreshold={0.5}
+				itemLayoutAnimation={LinearTransition.springify()}
 				ListFooterComponent={
 					isLoadingMore ? <ActivityIndicator color={Colors.primary} /> : null
 				}

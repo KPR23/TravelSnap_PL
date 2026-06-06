@@ -2,6 +2,7 @@ import { Trip } from "@/types/tripSchema";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
 	FadeInDown,
+	FadeOutLeft,
 	useAnimatedStyle,
 	useSharedValue,
 	withSpring,
@@ -32,6 +33,7 @@ export function AnimatedTripCard({ trip, index, onPress }: TripCardProps) {
 	return (
 		<Animated.View
 			entering={FadeInDown.delay(index * 80).springify()}
+			exiting={FadeOutLeft.springify()}
 			style={animatedStyle}
 		>
 			<GestureDetector gesture={tapGesture}>
