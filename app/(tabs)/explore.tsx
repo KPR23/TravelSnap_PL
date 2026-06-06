@@ -5,7 +5,8 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { POPULAR } from "@/lib/destinations";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const SKELETON_DELAY_MS = 2000;
@@ -79,18 +80,29 @@ export default function ExploreScreen() {
 					))}
 				</View>
 			) : (
-				<FlatList
+				<Animated.FlatList
 					data={POPULAR}
 					keyExtractor={(city) => city}
+					numColumns={2}
+					columnWrapperStyle={styles.column}
 					refreshing={isRefreshing}
 					onRefresh={refetchAll}
-					renderItem={({ item }) => (
-						<DestinationCard
-							city={item}
-							refreshToken={refreshToken}
-							onRefreshSettled={handleCardRefreshSettled}
-						/>
-					)}
+					renderItem={({ item, index }) => {
+						const column = index % 2;
+
+						return (
+							<Animated.View
+								entering={FadeInDown.delay(index * 100 + column * 50).springify()}
+								style={styles.gridItem}
+							>
+								<DestinationCard
+									city={item}
+									refreshToken={refreshToken}
+									onRefreshSettled={handleCardRefreshSettled}
+								/>
+							</Animated.View>
+						);
+					}}
 					contentContainerStyle={styles.listContent}
 					showsVerticalScrollIndicator={false}
 				/>
@@ -109,7 +121,13 @@ const styles = StyleSheet.create({
 	},
 	listContent: {
 		padding: Spacing.lg,
+	},
+	column: {
 		gap: Spacing.lg,
+		marginBottom: Spacing.lg,
+	},
+	gridItem: {
+		flex: 1,
 	},
 	skeletonContainer: {
 		padding: Spacing.lg,
