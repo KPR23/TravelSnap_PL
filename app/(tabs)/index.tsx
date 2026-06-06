@@ -20,7 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const PAGE_SIZE = 20;
 
 export default function HomeScreen() {
-	const { trips } = useTrips();
+	const { trips, deleteTrip } = useTrips();
 	const sortedTrips = useMemo(
 		() => [...trips].sort((a, b) => b.rating - a.rating),
 		[trips],
@@ -89,6 +89,7 @@ export default function HomeScreen() {
 						trip={item}
 						index={index}
 						onPress={handleTripPress}
+						onDelete={deleteTrip}
 					/>
 				)}
 			/>

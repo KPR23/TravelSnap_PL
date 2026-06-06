@@ -3,20 +3,46 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
 	FadeInDown,
 	FadeOutLeft,
+	runOnJS,
 	useAnimatedStyle,
 	useSharedValue,
 	withSpring,
+	withTiming,
 } from "react-native-reanimated";
 import { TripCard } from "../TripCard";
 
-type TripCardProps = {
+type AnimatedTripCardProps = {
 	trip: Trip;
 	index: number;
 	onPress: (id: string) => void;
+	onDelete: (id: string) => Promise<void>;
 };
 
-export function AnimatedTripCard({ trip, index, onPress }: TripCardProps) {
+export function AnimatedTripCard({
+	trip,
+	index,
+	onPress,
+	onDelete,
+}: AnimatedTripCardProps) {
+	const translateX = useSharedValue(0);
 	const scale = useSharedValue(1);
+
+	const panGesture = Gesture.Pan()
+		.activeOffsetX([-10, 10])
+		.onUpdate((e) => {
+			if (e.translationX < 0) {
+				translateX.value = e.translationX;
+			}
+		})
+		.onEnd((e) => {
+			if (e.translationX < -80) {
+				translateX.value = withTiming(-500, { duration: 300 }, (finished) => {
+					if (finished) runOnJS(onDelete)(trip.id);
+				});
+			} else {
+				translateX.value = withSpring(0);
+			}
+		});
 
 	const tapGesture = Gesture.Tap()
 		.onBegin(() => {
@@ -26,18 +52,21 @@ export function AnimatedTripCard({ trip, index, onPress }: TripCardProps) {
 			scale.value = withSpring(1.0, { damping: 10, stiffness: 200 });
 		});
 
+	const composedGesture = Gesture.Simultaneous(tapGesture, panGesture);
+
 	const animatedStyle = useAnimatedStyle(() => ({
-		transform: [{ scale: scale.value }],
+		transform: [{ translateX: translateX.value }, { scale: scale.value }],
 	}));
 
 	return (
 		<Animated.View
 			entering={FadeInDown.delay(index * 80).springify()}
 			exiting={FadeOutLeft.springify()}
-			style={animatedStyle}
 		>
-			<GestureDetector gesture={tapGesture}>
-				<TripCard trip={trip} onPress={onPress} />
+			<GestureDetector gesture={composedGesture}>
+				<Animated.View style={animatedStyle}>
+					<TripCard trip={trip} onPress={onPress} />
+				</Animated.View>
 			</GestureDetector>
 		</Animated.View>
 	);
