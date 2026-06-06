@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { LikeButton } from "./animated/LikeButton";
 import { SharedTripImage } from "./animated/SharedTripImage";
 import RatingStars from "./RatingStars";
 
@@ -19,14 +20,18 @@ export const TripCard = React.memo(function TripCard({
 	onPress,
 	sharedTransitionTag,
 }: TripCardProps) {
-	const { deleteTrip } = useTrips();
+	const { deleteTrip, toggleFavorite } = useTrips();
 	const handleDeleteTrip = async (id: string) => {
 		await deleteTrip(id);
 	};
 
+	const handleToggleFavorite = async () => {
+		await toggleFavorite(trip.id);
+	};
+
 	return (
-		<Pressable onPress={() => onPress(trip.id)}>
-			<View style={styles.card}>
+		<View style={styles.card}>
+			<Pressable onPress={() => onPress(trip.id)}>
 				{trip.imageUri &&
 					(sharedTransitionTag ? (
 						<SharedTripImage
@@ -66,8 +71,14 @@ export const TripCard = React.memo(function TripCard({
 				>
 					<Text style={styles.deleteButtonText}>Usuń</Text>
 				</Pressable>
+			</Pressable>
+			<View style={styles.likeButtonContainer}>
+				<LikeButton
+					isLiked={!!trip.isFavorite}
+					onToggle={handleToggleFavorite}
+				/>
 			</View>
-		</Pressable>
+		</View>
 	);
 });
 
@@ -81,7 +92,14 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.2,
 		shadowRadius: 8,
 		elevation: 4,
-		overflow: "hidden",
+	},
+	likeButtonContainer: {
+		position: "absolute",
+		bottom: Spacing.lg,
+		right: Spacing.lg,
+		backgroundColor: `${Colors.background}CC`,
+		borderRadius: 999,
+		zIndex: 1,
 	},
 	galleryContainer: {
 		position: "absolute",
