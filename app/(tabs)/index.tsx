@@ -1,5 +1,5 @@
+import { AnimatedTripCard } from "@/components/animated/AnimatedTripCard";
 import ScreenHeader from "@/components/ScreenHeader";
-import { TripCard } from "@/components/TripCard";
 import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
@@ -10,11 +10,11 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
-	FlatList,
 	Platform,
 	Pressable,
 	StyleSheet,
 } from "react-native";
+import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 20;
@@ -71,7 +71,7 @@ export default function HomeScreen() {
 				averageRating={averageRating}
 				uniqueDestinations={uniqueDestinations}
 			/>
-			<FlatList
+			<Animated.FlatList
 				data={visibleTrips}
 				keyExtractor={(item) => item.id}
 				initialNumToRender={10}
@@ -83,8 +83,12 @@ export default function HomeScreen() {
 				ListFooterComponent={
 					isLoadingMore ? <ActivityIndicator color={Colors.primary} /> : null
 				}
-				renderItem={({ item }) => (
-					<TripCard trip={item} onPress={handleTripPress} />
+				renderItem={({ item, index }) => (
+					<AnimatedTripCard
+						trip={item}
+						index={index}
+						onPress={handleTripPress}
+					/>
 				)}
 			/>
 			<Pressable style={styles.fab} onPress={() => router.push("/add-trip")}>
