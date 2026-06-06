@@ -1,9 +1,10 @@
 import { Trip } from "@/types/tripSchema";
-import { StyleSheet } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
 	FadeInDown,
 	useAnimatedStyle,
 	useSharedValue,
+	withSpring,
 } from "react-native-reanimated";
 import { TripCard } from "../TripCard";
 
@@ -16,6 +17,14 @@ type TripCardProps = {
 export function AnimatedTripCard({ trip, index, onPress }: TripCardProps) {
 	const scale = useSharedValue(1);
 
+	const tapGesture = Gesture.Tap()
+		.onBegin(() => {
+			scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
+		})
+		.onFinalize(() => {
+			scale.value = withSpring(1.0, { damping: 10, stiffness: 200 });
+		});
+
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ scale: scale.value }],
 	}));
@@ -23,17 +32,11 @@ export function AnimatedTripCard({ trip, index, onPress }: TripCardProps) {
 	return (
 		<Animated.View
 			entering={FadeInDown.delay(index * 80).springify()}
-			style={[styles.box, animatedStyle]}
+			style={animatedStyle}
 		>
-			<TripCard trip={trip} onPress={onPress} />
+			<GestureDetector gesture={tapGesture}>
+				<TripCard trip={trip} onPress={onPress} />
+			</GestureDetector>
 		</Animated.View>
 	);
 }
-
-const styles = StyleSheet.create({
-	box: {
-		width: 100,
-		height: 100,
-		backgroundColor: "red",
-	},
-});
