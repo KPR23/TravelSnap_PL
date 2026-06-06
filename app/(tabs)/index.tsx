@@ -1,32 +1,34 @@
+import { AnimatedTripCard } from "@/components/animated/AnimatedTripCard";
+import { FAB } from "@/components/FAB";
 import ScreenHeader from "@/components/ScreenHeader";
-import { TripCard } from "@/components/TripCard";
 import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
 import { getTripStats } from "@/utils/tripStats";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-	ActivityIndicator,
-	FlatList,
-	Platform,
-	Pressable,
-	StyleSheet,
-} from "react-native";
+import { ActivityIndicator, Platform, StyleSheet } from "react-native";
+import Animated, { LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 20;
 
 export default function HomeScreen() {
-	const { trips } = useTrips();
+	const { trips, deleteTrip } = useTrips();
 	const sortedTrips = useMemo(
 		() => [...trips].sort((a, b) => b.rating - a.rating),
 		[trips],
 	);
 	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const [fabResetKey, setFabResetKey] = useState(0);
+
+	useFocusEffect(
+		useCallback(() => {
+			setFabResetKey((key) => key + 1);
+		}, []),
+	);
 
 	const visibleTrips = useMemo(
 		() => sortedTrips.slice(0, visibleCount),
@@ -71,7 +73,7 @@ export default function HomeScreen() {
 				averageRating={averageRating}
 				uniqueDestinations={uniqueDestinations}
 			/>
-			<FlatList
+			<Animated.FlatList
 				data={visibleTrips}
 				keyExtractor={(item) => item.id}
 				initialNumToRender={10}
@@ -80,16 +82,23 @@ export default function HomeScreen() {
 				removeClippedSubviews={Platform.OS === "android"}
 				onEndReached={loadMore}
 				onEndReachedThreshold={0.5}
+				itemLayoutAnimation={LinearTransition.springify()}
 				ListFooterComponent={
 					isLoadingMore ? <ActivityIndicator color={Colors.primary} /> : null
 				}
-				renderItem={({ item }) => (
-					<TripCard trip={item} onPress={handleTripPress} />
+				renderItem={({ item, index }) => (
+					<AnimatedTripCard
+						trip={item}
+						index={index}
+						onPress={handleTripPress}
+						onDelete={deleteTrip}
+					/>
 				)}
 			/>
-			<Pressable style={styles.fab} onPress={() => router.push("/add-trip")}>
-				<Ionicons name="add" size={30} color={Colors.background} />
-			</Pressable>
+			<FAB
+				resetKey={fabResetKey}
+				onPress={() => router.push("/add-trip")}
+			/>
 		</SafeAreaView>
 	);
 }

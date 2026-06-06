@@ -1,26 +1,30 @@
 import { DestinationCard } from "@/components/DestinationCard";
 import ScreenHeader from "@/components/ScreenHeader";
+import { SkeletonCard } from "@/components/SkeletonCard";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { POPULAR } from "@/lib/destinations";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const SKELETON_DELAY_MS = 2000;
+
 export default function ExploreScreen() {
-	// Każda zmiana tokenu jest sygnałem "zrób refetch" dla każdej karty.
-	// Dzięki temu unikamy remountowania całej listy przez `key`.
 	const [refreshToken, setRefreshToken] = useState(0);
-	// `refreshing` steruje spinnerem w FlatList.
-	// Ten stan ma odpowiadać faktycznemu trwaniu odświeżania, a nie tylko kliknięciu/pull gesture.
+
+	const [isInitialLoading, setIsInitialLoading] = useState(true);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	// Licznik kart, które jeszcze nie zakończyły swojej próby refetchu.
 	const [pendingCards, setPendingCards] = useState(0);
-	// Resolver Promise używany do "czekania" w refetchAll, aż wszystkie karty się rozliczą.
 	const refreshResolverRef = useRef<(() => void) | null>(null);
 
 	useEffect(() => {
-		// Gdy ostatnia karta zgłosi zakończenie, zwalniamy await w refetchAll.
+		const timer = setTimeout(() => setIsInitialLoading(false), SKELETON_DELAY_MS);
+		return () => clearTimeout(timer);
+	}, []);
+
+	useEffect(() => {
 		if (isRefreshing && pendingCards === 0 && refreshResolverRef.current) {
 			refreshResolverRef.current();
 			refreshResolverRef.current = null;
@@ -28,25 +32,26 @@ export default function ExploreScreen() {
 	}, [isRefreshing, pendingCards]);
 
 	const handleCardRefreshSettled = useCallback(() => {
-		// Zabezpieczenie przed zejściem poniżej 0 (np. przy nietypowej kolejności callbacków).
 		setPendingCards((prev) => Math.max(prev - 1, 0));
 	}, []);
 
-	// Trzymamy `refreshing=true` aż wszystkie karty zakończą własny refetch.
-	// Dzięki temu spinner znika dopiero po rzeczywistym odświeżeniu danych, a nie po samym triggerze.
 	const refetchAll = async () => {
-		// FlatList potrafi wywołać onRefresh ponownie zanim poprzedni cykl się skończy;
-		// guard zapobiega nakładaniu kilku refreshy naraz.
 		if (isRefreshing) return;
 
 		setIsRefreshing(true);
+		const startedAt = Date.now();
+
 		try {
-			// Startujemy nową rundę i oczekujemy tylu sygnałów, ile renderujemy kart.
 			setPendingCards(POPULAR.length);
 			setRefreshToken((prev) => prev + 1);
 			await new Promise<void>((resolve) => {
 				refreshResolverRef.current = resolve;
 			});
+
+			const remaining = SKELETON_DELAY_MS - (Date.now() - startedAt);
+			if (remaining > 0) {
+				await new Promise((resolve) => setTimeout(resolve, remaining));
+			}
 		} catch (error) {
 			console.error("Nie udało się odświeżyć kart kierunków", error);
 		} finally {
@@ -55,6 +60,8 @@ export default function ExploreScreen() {
 			refreshResolverRef.current = null;
 		}
 	};
+
+	const showSkeleton = isInitialLoading || isRefreshing;
 
 	return (
 		<SafeAreaView style={styles.container}>
@@ -66,21 +73,40 @@ export default function ExploreScreen() {
 				/>
 			</View>
 
-			<FlatList
-				data={POPULAR}
-				keyExtractor={(city) => city}
-				refreshing={isRefreshing}
-				onRefresh={refetchAll}
-				renderItem={({ item }) => (
-					<DestinationCard
-						city={item}
-						refreshToken={refreshToken}
-						onRefreshSettled={handleCardRefreshSettled}
-					/>
-				)}
-				contentContainerStyle={styles.listContent}
-				showsVerticalScrollIndicator={false}
-			/>
+			{showSkeleton ? (
+				<View style={styles.skeletonContainer}>
+					{Array.from({ length: 10 }).map((_, index) => (
+						<SkeletonCard key={index} />
+					))}
+				</View>
+			) : (
+				<Animated.FlatList
+					data={POPULAR}
+					keyExtractor={(city) => city}
+					numColumns={2}
+					columnWrapperStyle={styles.column}
+					refreshing={isRefreshing}
+					onRefresh={refetchAll}
+					renderItem={({ item, index }) => {
+						const column = index % 2;
+
+						return (
+							<Animated.View
+								entering={FadeInDown.delay(index * 100 + column * 50).springify()}
+								style={styles.gridItem}
+							>
+								<DestinationCard
+									city={item}
+									refreshToken={refreshToken}
+									onRefreshSettled={handleCardRefreshSettled}
+								/>
+							</Animated.View>
+						);
+					}}
+					contentContainerStyle={styles.listContent}
+					showsVerticalScrollIndicator={false}
+				/>
+			)}
 		</SafeAreaView>
 	);
 }
@@ -94,6 +120,16 @@ const styles = StyleSheet.create({
 		paddingHorizontal: Spacing.lg,
 	},
 	listContent: {
+		padding: Spacing.lg,
+	},
+	column: {
+		gap: Spacing.lg,
+		marginBottom: Spacing.lg,
+	},
+	gridItem: {
+		flex: 1,
+	},
+	skeletonContainer: {
 		padding: Spacing.lg,
 		gap: Spacing.lg,
 	},
