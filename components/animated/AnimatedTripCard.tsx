@@ -65,7 +65,11 @@ export function AnimatedTripCard({
 		>
 			<GestureDetector gesture={composedGesture}>
 				<Animated.View style={animatedStyle}>
-					<TripCard trip={trip} onPress={onPress} />
+					<TripCard
+						trip={trip}
+						onPress={onPress}
+						sharedTransitionTag={`trip-image-${trip.id}`}
+					/>
 				</Animated.View>
 			</GestureDetector>
 		</Animated.View>

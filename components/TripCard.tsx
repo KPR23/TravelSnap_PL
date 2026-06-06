@@ -6,15 +6,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { SharedTripImage } from "./animated/SharedTripImage";
 import RatingStars from "./RatingStars";
 
 type TripCardProps = {
 	trip: Trip;
 	onPress: (id: string) => void;
+	sharedTransitionTag?: string;
 };
 export const TripCard = React.memo(function TripCard({
 	trip,
 	onPress,
+	sharedTransitionTag,
 }: TripCardProps) {
 	const { deleteTrip } = useTrips();
 	const handleDeleteTrip = async (id: string) => {
@@ -24,15 +27,22 @@ export const TripCard = React.memo(function TripCard({
 	return (
 		<Pressable onPress={() => onPress(trip.id)}>
 			<View style={styles.card}>
-				{trip.imageUri && (
-					<Image
-						source={{ uri: trip.imageUri }}
-						style={styles.image}
-						contentFit="cover"
-						cachePolicy="memory-disk"
-						transition={200}
-					/>
-				)}
+				{trip.imageUri &&
+					(sharedTransitionTag ? (
+						<SharedTripImage
+							uri={trip.imageUri}
+							sharedTransitionTag={sharedTransitionTag}
+							style={styles.image}
+						/>
+					) : (
+						<Image
+							source={{ uri: trip.imageUri }}
+							style={styles.image}
+							contentFit="cover"
+							cachePolicy="memory-disk"
+							transition={200}
+						/>
+					))}
 				{trip.galleryUris && trip.galleryUris.length > 0 && (
 					<View style={styles.galleryContainer}>
 						<Ionicons

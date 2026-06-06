@@ -1,3 +1,4 @@
+import { SharedTripImage } from "@/components/animated/SharedTripImage";
 import { CountryCard } from "@/components/CountryCard";
 import { DestinationPhoto } from "@/components/DestinationPhoto";
 import { ErrorView } from "@/components/ErrorView";
@@ -151,10 +152,18 @@ export default function TripDetailScreen() {
 			>
 				<ScrollView contentContainerStyle={styles.content}>
 					<View style={styles.topSection}>
-						<DestinationPhoto
-							city={trip.destination}
-							fallbackUri={trip.imageUri}
-						/>
+						{trip.imageUri ? (
+							<SharedTripImage
+								uri={trip.imageUri}
+								sharedTransitionTag={`trip-image-${trip.id}`}
+								style={styles.detailImage}
+							/>
+						) : (
+							<DestinationPhoto
+								city={trip.destination}
+								fallbackUri={trip.imageUri}
+							/>
+						)}
 						<CountryCard countryName={extractCountry(trip.destination)} />
 
 						<Link
@@ -251,6 +260,12 @@ const styles = StyleSheet.create({
 	topSection: {
 		flex: 1,
 		gap: Spacing.sm,
+	},
+	detailImage: {
+		width: "100%",
+		height: 250,
+		borderRadius: Spacing.sm,
+		marginBottom: Spacing.sm,
 	},
 	title: {
 		fontSize: 24,
