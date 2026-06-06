@@ -1,19 +1,14 @@
 import { AnimatedTripCard } from "@/components/animated/AnimatedTripCard";
+import { FAB } from "@/components/FAB";
 import ScreenHeader from "@/components/ScreenHeader";
 import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
 import { getTripStats } from "@/utils/tripStats";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-	ActivityIndicator,
-	Platform,
-	Pressable,
-	StyleSheet,
-} from "react-native";
+import { ActivityIndicator, Platform, StyleSheet } from "react-native";
 import Animated, { LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -27,6 +22,13 @@ export default function HomeScreen() {
 	);
 	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const [fabResetKey, setFabResetKey] = useState(0);
+
+	useFocusEffect(
+		useCallback(() => {
+			setFabResetKey((key) => key + 1);
+		}, []),
+	);
 
 	const visibleTrips = useMemo(
 		() => sortedTrips.slice(0, visibleCount),
@@ -93,9 +95,10 @@ export default function HomeScreen() {
 					/>
 				)}
 			/>
-			<Pressable style={styles.fab} onPress={() => router.push("/add-trip")}>
-				<Ionicons name="add" size={30} color={Colors.background} />
-			</Pressable>
+			<FAB
+				resetKey={fabResetKey}
+				onPress={() => router.push("/add-trip")}
+			/>
 		</SafeAreaView>
 	);
 }

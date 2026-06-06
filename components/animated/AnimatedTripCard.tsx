@@ -3,12 +3,12 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
 	FadeInDown,
 	FadeOutLeft,
-	runOnJS,
 	useAnimatedStyle,
 	useSharedValue,
 	withSpring,
 	withTiming,
 } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import { TripCard } from "../TripCard";
 
 type AnimatedTripCardProps = {
@@ -37,7 +37,7 @@ export function AnimatedTripCard({
 		.onEnd((e) => {
 			if (e.translationX < -80) {
 				translateX.value = withTiming(-500, { duration: 300 }, (finished) => {
-					if (finished) runOnJS(onDelete)(trip.id);
+					if (finished) scheduleOnRN(onDelete, trip.id);
 				});
 			} else {
 				translateX.value = withSpring(0);
