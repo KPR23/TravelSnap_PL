@@ -1,3 +1,4 @@
+import { LikeButton } from "@/components/animated/LikeButton";
 import { SharedTripImage } from "@/components/animated/SharedTripImage";
 import { CountryCard } from "@/components/CountryCard";
 import { DestinationPhoto } from "@/components/DestinationPhoto";
@@ -16,12 +17,20 @@ import {
 	ActivityIndicator,
 	Alert,
 	Pressable,
-	ScrollView,
 	StyleSheet,
 	Text,
 	View,
 } from "react-native";
+import Animated, {
+	Extrapolation,
+	interpolate,
+	useAnimatedRef,
+	useAnimatedStyle,
+	useScrollViewOffset,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const HEADER_HEIGHT = 280;
 
 export default function TripDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,6 +41,28 @@ export default function TripDetailScreen() {
 	const parsedRating = trip?.rating ?? 0;
 	const [formattedAddress, setFormattedAddress] = useState<string | null>(null);
 	const [addressLoading, setAddressLoading] = useState(false);
+	const scrollRef = useAnimatedRef<Animated.ScrollView>();
+	const scrollY = useScrollViewOffset(scrollRef);
+
+	const headerStyle = useAnimatedStyle(() => {
+		const translateY = interpolate(
+			scrollY.value,
+			[-HEADER_HEIGHT, 0, HEADER_HEIGHT],
+			[-HEADER_HEIGHT / 2, 0, HEADER_HEIGHT * 0.75],
+			Extrapolation.CLAMP,
+		);
+		const scale = interpolate(
+			scrollY.value,
+			[-HEADER_HEIGHT, 0],
+			[2, 1],
+			Extrapolation.CLAMP,
+		);
+
+		return {
+			transform: [{ translateY }, { scale }],
+		};
+	});
+
 	const galleryCount = trip
 		? Array.from(
 				new Set([trip.imageUri, ...(trip.galleryUris ?? [])].filter(Boolean)),
@@ -132,16 +163,10 @@ export default function TripDetailScreen() {
 									/>
 								</Pressable>
 							</Link>
-							<Pressable
-								style={styles.headerButton}
-								onPress={handleToggleFavorite}
-							>
-								<Ionicons
-									name={isFavorite ? "heart" : "heart-outline"}
-									size={24}
-									color={isFavorite ? Colors.accent : Colors.textSecondary}
-								/>
-							</Pressable>
+							<LikeButton
+								isLiked={isFavorite}
+								onToggle={handleToggleFavorite}
+							/>
 						</View>
 					),
 				}}
@@ -150,20 +175,28 @@ export default function TripDetailScreen() {
 				style={styles.container}
 				edges={["left", "right", "bottom"]}
 			>
-				<ScrollView contentContainerStyle={styles.content}>
+				<Animated.ScrollView
+					ref={scrollRef}
+					contentContainerStyle={styles.content}
+					showsVerticalScrollIndicator={false}
+				>
+					<View style={styles.header}>
+						<Animated.View style={[styles.headerImageWrapper, headerStyle]}>
+							{trip.imageUri ? (
+								<SharedTripImage
+									uri={trip.imageUri}
+									sharedTransitionTag={`trip-image-${trip.id}`}
+									style={styles.headerImage}
+								/>
+							) : (
+								<DestinationPhoto
+									city={trip.destination}
+									fallbackUri={trip.imageUri}
+								/>
+							)}
+						</Animated.View>
+					</View>
 					<View style={styles.topSection}>
-						{trip.imageUri ? (
-							<SharedTripImage
-								uri={trip.imageUri}
-								sharedTransitionTag={`trip-image-${trip.id}`}
-								style={styles.detailImage}
-							/>
-						) : (
-							<DestinationPhoto
-								city={trip.destination}
-								fallbackUri={trip.imageUri}
-							/>
-						)}
 						<CountryCard countryName={extractCountry(trip.destination)} />
 
 						<Link
@@ -241,7 +274,7 @@ export default function TripDetailScreen() {
 							/>
 						</Pressable>
 					</View>
-				</ScrollView>
+				</Animated.ScrollView>
 			</SafeAreaView>
 		</>
 	);
@@ -261,11 +294,19 @@ const styles = StyleSheet.create({
 		flex: 1,
 		gap: Spacing.sm,
 	},
-	detailImage: {
-		width: "100%",
-		height: 250,
+	header: {
+		height: HEADER_HEIGHT,
+		overflow: "hidden",
 		borderRadius: Spacing.sm,
 		marginBottom: Spacing.sm,
+	},
+	headerImageWrapper: {
+		height: HEADER_HEIGHT,
+		width: "100%",
+	},
+	headerImage: {
+		width: "100%",
+		height: "100%",
 	},
 	title: {
 		fontSize: 24,
