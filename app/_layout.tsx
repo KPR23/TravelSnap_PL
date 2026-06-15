@@ -1,5 +1,7 @@
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { Colors } from "@/constants/Colors";
 import { TripsProvider } from "@/context/TripsContext";
+import { QueryProvider } from "@/providers/QueryProvider";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -7,9 +9,11 @@ import "react-native-reanimated";
 
 export default function RootLayout() {
 	return (
-		<GestureHandlerRootView style={{ flex: 1 }}>
-			<TripsProvider>
-				<Stack
+		<QueryProvider>
+			<GestureHandlerRootView style={{ flex: 1 }}>
+				<OfflineBanner />
+				<TripsProvider>
+					<Stack
 					screenOptions={{
 						headerShown: false,
 						headerBackButtonMenuEnabled: false,
@@ -55,7 +59,8 @@ export default function RootLayout() {
 					/>
 				</Stack>
 				<StatusBar style="light" />
-			</TripsProvider>
-		</GestureHandlerRootView>
+				</TripsProvider>
+			</GestureHandlerRootView>
+		</QueryProvider>
 	);
 }
