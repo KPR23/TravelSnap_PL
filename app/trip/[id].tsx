@@ -7,6 +7,8 @@ import RatingStars from "@/components/RatingStars";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
+import { useDeleteTrip } from "@/hooks/useTripMutations";
+import { useTripsQuery } from "@/hooks/useTripsQuery";
 import { extractCountry } from "@/utils/extractCountry";
 import { formatGeocodedAddress } from "@/utils/formatGeocodedAddress";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,9 +36,11 @@ const HEADER_HEIGHT = 280;
 
 export default function TripDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
-	const { getTripById, toggleFavorite, deleteTrip } = useTrips();
+	const { data: trips = [] } = useTripsQuery();
+	const { toggleFavorite } = useTrips();
+	const { mutateAsync: deleteTrip } = useDeleteTrip();
 	const router = useRouter();
-	const trip = getTripById(id);
+	const trip = trips.find((t) => t.id === id);
 	const isFavorite = !!trip?.isFavorite;
 	const parsedRating = trip?.rating ?? 0;
 	const [formattedAddress, setFormattedAddress] = useState<string | null>(null);

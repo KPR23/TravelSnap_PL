@@ -1,15 +1,13 @@
 import { Colors } from "@/constants/Colors";
-import type { Trip, TripFormData } from "@/types/tripSchema";
-import { saveImageToTrip } from "@/utils/imageStorage";
-import { loadTrips, saveTrips } from "@/utils/tripStorage";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { Trip } from "@/types/tripSchema";
+import { useTripsQuery } from "@/hooks/useTripsQuery";
+import { queryClient } from "@/lib/queryClient";
+import { saveTrips } from "@/utils/tripStorage";
+import { createContext, useContext, useMemo } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 type TripsContextValue = {
 	trips: Trip[];
-	addTrip: (data: TripFormData) => Promise<string>;
-	updateTrip: (id: string, data: Partial<TripFormData>) => Promise<void>;
-	deleteTrip: (id: string) => Promise<void>;
 	addGalleryImage: (tripId: string, uri: string) => Promise<void>;
 	removeGalleryImage: (tripId: string, uri: string) => Promise<void>;
 	setMainImage: (tripId: string, uri: string) => Promise<void>;
@@ -20,67 +18,20 @@ type TripsContextValue = {
 const TripsContext = createContext<TripsContextValue | undefined>(undefined);
 
 export function TripsProvider({ children }: { children: React.ReactNode }) {
-	const [trips, setTrips] = useState<Trip[]>([]);
-	const [loading, setLoading] = useState(true);
-
-	useEffect(() => {
-		async function loadTripsAsync() {
-			const trips = await loadTrips();
-			setTrips(trips);
-			setLoading(false);
-		}
-
-		loadTripsAsync();
-	}, []);
+	const { data: trips = [], isLoading: loading } = useTripsQuery();
 
 	const value = useMemo<TripsContextValue>(() => {
 		const persistTrips = async (
 			getNextTrips: (prevTrips: Trip[]) => Trip[],
 		) => {
-			let nextTrips: Trip[] | undefined;
-
-			setTrips((prevTrips) => {
-				nextTrips = getNextTrips(prevTrips);
-				return nextTrips;
-			});
-
-			if (nextTrips) {
-				await saveTrips(nextTrips);
-			}
+			const current = queryClient.getQueryData<Trip[]>(["trips"]) ?? trips;
+			const nextTrips = getNextTrips(current);
+			await saveTrips(nextTrips);
+			await queryClient.invalidateQueries({ queryKey: ["trips"] });
 		};
 
 		return {
 			trips,
-			addTrip: async (data: TripFormData) => {
-				const id = Date.now().toString();
-
-				let imageUri = data.imageUri;
-
-				if (imageUri) {
-					imageUri = await saveImageToTrip(imageUri, id);
-				}
-
-				const mergedGalleryUris = Array.from(
-					new Set([imageUri, ...(data.galleryUris ?? [])].filter(Boolean)),
-				) as string[];
-
-				const newTrip = { id, ...data, imageUri, galleryUris: mergedGalleryUris };
-				await persistTrips((prevTrips) => [...prevTrips, newTrip]);
-
-				return id;
-			},
-			updateTrip: async (id: string, data: Partial<TripFormData>) => {
-				await persistTrips((prevTrips) =>
-					prevTrips.map((trip) =>
-						trip.id === id ? { ...trip, ...data } : trip,
-					),
-				);
-			},
-			deleteTrip: async (id: string) => {
-				await persistTrips((prevTrips) =>
-					prevTrips.filter((trip) => trip.id !== id),
-				);
-			},
 			setMainImage: async (tripId: string, uri: string) => {
 				await persistTrips((prevTrips) =>
 					prevTrips.map((trip) =>

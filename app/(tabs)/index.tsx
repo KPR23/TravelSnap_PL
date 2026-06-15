@@ -64,8 +64,8 @@ export default function HomeScreen() {
 	);
 
 	const handleDeleteTrip = useCallback(
-		(id: string) => {
-			void deleteTrip(id);
+		async (id: string) => {
+			await deleteTrip(id);
 		},
 		[deleteTrip],
 	);

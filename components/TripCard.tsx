@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
+import { useDeleteTrip } from "@/hooks/useTripMutations";
 import type { Trip } from "@/types/tripSchema";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -20,7 +21,8 @@ export const TripCard = React.memo(function TripCard({
 	onPress,
 	sharedTransitionTag,
 }: TripCardProps) {
-	const { deleteTrip, toggleFavorite } = useTrips();
+	const { mutateAsync: deleteTrip } = useDeleteTrip();
+	const { toggleFavorite } = useTrips();
 	const handleDeleteTrip = async (id: string) => {
 		await deleteTrip(id);
 	};

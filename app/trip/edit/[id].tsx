@@ -1,7 +1,8 @@
 import TripForm from "@/components/TripForm";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
-import { useTrips } from "@/context/TripsContext";
+import { useUpdateTrip } from "@/hooks/useTripMutations";
+import { useTripsQuery } from "@/hooks/useTripsQuery";
 import { TripFormData } from "@/types/tripSchema";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo } from "react";
@@ -11,12 +12,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function EditTripScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
-	const { trips, updateTrip } = useTrips();
+	const { data: trips = [] } = useTripsQuery();
+	const { mutateAsync: updateTrip } = useUpdateTrip();
 	const trip = useMemo(() => trips.find((t) => t.id === id), [trips, id]);
 
 	const onSubmit = async (data: TripFormData) => {
 		if (!trip) return;
-		await updateTrip(trip.id, data);
+		await updateTrip({ id: trip.id, data });
 		router.back();
 	};
 
