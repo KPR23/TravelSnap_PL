@@ -1,11 +1,13 @@
-import { deleteTrip, saveTrip } from "@/utils/tripStorage";
+import { deleteTrip, saveTrip, updateTrip } from "@/utils/tripStorage";
 import type { Trip, TripFormData } from "@/types/tripSchema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+type TripMutationContext = { previous: Trip[] };
 
 export function useAddTrip() {
 	const qc = useQueryClient();
 
-	return useMutation<Trip, Error, TripFormData>({
+	return useMutation<Trip, Error, TripFormData, TripMutationContext>({
 		mutationFn: saveTrip,
 
 		onMutate: async (newData) => {
@@ -37,7 +39,7 @@ export function useAddTrip() {
 export function useDeleteTrip() {
 	const qc = useQueryClient();
 
-	return useMutation<void, Error, string>({
+	return useMutation<void, Error, string, TripMutationContext>({
 		mutationFn: deleteTrip,
 
 		onMutate: async (tripId) => {
@@ -56,6 +58,36 @@ export function useDeleteTrip() {
 			if (ctx?.previous) {
 				qc.setQueryData(["trips"], ctx.previous);
 			}
+		},
+
+		onSettled: () => qc.invalidateQueries({ queryKey: ["trips"] }),
+	});
+}
+
+export function useUpdateTrip() {
+	const qc = useQueryClient();
+
+	return useMutation<
+		Trip,
+		Error,
+		{ id: string; data: Partial<TripFormData> },
+		TripMutationContext
+	>({
+		mutationFn: ({ id, data }) => updateTrip(id, data),
+
+		onMutate: async ({ id, data }) => {
+			await qc.cancelQueries({ queryKey: ["trips"] });
+			const previous = qc.getQueryData<Trip[]>(["trips"]) ?? [];
+
+			qc.setQueryData<Trip[]>(["trips"], (old = []) =>
+				old.map((trip) => (trip.id === id ? { ...trip, ...data } : trip)),
+			);
+
+			return { previous };
+		},
+
+		onError: (_err, _vars, ctx) => {
+			if (ctx?.previous) qc.setQueryData(["trips"], ctx.previous);
 		},
 
 		onSettled: () => qc.invalidateQueries({ queryKey: ["trips"] }),
