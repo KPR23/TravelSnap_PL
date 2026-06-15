@@ -1,11 +1,8 @@
-import { UNSPLASH_ACCESS_KEY, UNSPLASH_BASE_URL } from "@/constants/api";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
-import { useFetch } from "@/hooks/useFetch";
-import type { UnsplashResponse } from "@/types/unsplash";
+import { useUnsplashQuery } from "@/hooks/useUnsplashQuery";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 const HERO_BLURHASH = "LGF5]+Yk^6#M@-5c,1J5@[or[Q6.";
@@ -16,21 +13,7 @@ interface DestinationPhotoProps {
 }
 
 export function DestinationPhoto({ city, fallbackUri }: DestinationPhotoProps) {
-	const photoUrl = `${UNSPLASH_BASE_URL}/search/photos?query=${encodeURIComponent(
-		city,
-	)}&per_page=1`;
-	const photoRequestInit = useMemo<RequestInit>(
-		() => ({
-			headers: {
-				Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}`,
-			},
-		}),
-		[],
-	);
-	const { data: photoData, loading: photoLoading } = useFetch<UnsplashResponse>(
-		photoUrl,
-		photoRequestInit,
-	);
+	const { data: photoData, isLoading: photoLoading } = useUnsplashQuery(city, 1);
 
 	const unsplashUri = photoData?.results?.[0]?.urls?.regular;
 	const photoAuthor = photoData?.results?.[0]?.user?.name;
