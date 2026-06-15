@@ -1,38 +1,55 @@
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useTrips } from "@/context/TripsContext";
+import { useDeleteTrip } from "@/hooks/useTripMutations";
 import type { Trip } from "@/types/tripSchema";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { LikeButton } from "./animated/LikeButton";
+import { SharedTripImage } from "./animated/SharedTripImage";
 import RatingStars from "./RatingStars";
 
 type TripCardProps = {
 	trip: Trip;
 	onPress: (id: string) => void;
+	sharedTransitionTag?: string;
 };
 export const TripCard = React.memo(function TripCard({
 	trip,
 	onPress,
+	sharedTransitionTag,
 }: TripCardProps) {
-	const { deleteTrip } = useTrips();
+	const { mutateAsync: deleteTrip } = useDeleteTrip();
+	const { toggleFavorite } = useTrips();
 	const handleDeleteTrip = async (id: string) => {
 		await deleteTrip(id);
 	};
 
+	const handleToggleFavorite = async () => {
+		await toggleFavorite(trip.id);
+	};
+
 	return (
-		<Pressable onPress={() => onPress(trip.id)}>
-			<View style={styles.card}>
-				{trip.imageUri && (
-					<Image
-						source={{ uri: trip.imageUri }}
-						style={styles.image}
-						contentFit="cover"
-						cachePolicy="memory-disk"
-						transition={200}
-					/>
-				)}
+		<View style={styles.card}>
+			<Pressable onPress={() => onPress(trip.id)}>
+				{trip.imageUri &&
+					(sharedTransitionTag ? (
+						<SharedTripImage
+							uri={trip.imageUri}
+							sharedTransitionTag={sharedTransitionTag}
+							style={styles.image}
+						/>
+					) : (
+						<Image
+							source={{ uri: trip.imageUri }}
+							style={styles.image}
+							contentFit="cover"
+							cachePolicy="memory-disk"
+							transition={200}
+						/>
+					))}
 				{trip.galleryUris && trip.galleryUris.length > 0 && (
 					<View style={styles.galleryContainer}>
 						<Ionicons
@@ -56,8 +73,14 @@ export const TripCard = React.memo(function TripCard({
 				>
 					<Text style={styles.deleteButtonText}>Usuń</Text>
 				</Pressable>
+			</Pressable>
+			<View style={styles.likeButtonContainer}>
+				<LikeButton
+					isLiked={!!trip.isFavorite}
+					onToggle={handleToggleFavorite}
+				/>
 			</View>
-		</Pressable>
+		</View>
 	);
 });
 
@@ -71,7 +94,14 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.2,
 		shadowRadius: 8,
 		elevation: 4,
-		overflow: "hidden",
+	},
+	likeButtonContainer: {
+		position: "absolute",
+		bottom: Spacing.lg,
+		right: Spacing.lg,
+		backgroundColor: `${Colors.background}CC`,
+		borderRadius: 999,
+		zIndex: 1,
 	},
 	galleryContainer: {
 		position: "absolute",

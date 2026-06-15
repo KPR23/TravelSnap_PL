@@ -7,6 +7,7 @@ export const UNSPLASH_BASE_URL =
 	process.env.EXPO_PUBLIC_UNSPLASH_BASE_URL ?? fallbackUnsplashBaseUrl;
 export const RESTCOUNTRIES_BASE_URL =
 	process.env.EXPO_PUBLIC_RESTCOUNTRIES_BASE_URL ?? fallbackRestCountriesBaseUrl;
+export const COUNTRY_API = `${RESTCOUNTRIES_BASE_URL}/all?fields=name,flags,capital,currencies,region,cca2`;
 export const UNSPLASH_ACCESS_KEY = process.env.EXPO_PUBLIC_UNSPLASH_ACCESS_KEY ?? "";
 
 if (__DEV__ && !UNSPLASH_ACCESS_KEY) {

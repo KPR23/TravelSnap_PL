@@ -1,60 +1,63 @@
-import { DestinationCard } from "@/components/DestinationCard";
+import { CountryCard } from "@/components/CountryCard";
+import { ErrorView } from "@/components/ErrorView";
 import ScreenHeader from "@/components/ScreenHeader";
+import { SkeletonCard } from "@/components/SkeletonCard";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
+import { useCountriesQuery } from "@/hooks/useCountriesQuery";
+import { useUnsplashInfiniteQuery } from "@/hooks/useUnsplashInfiniteQuery";
 import { POPULAR } from "@/lib/destinations";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import type { UnsplashPhoto } from "@/types/unsplash";
+import { Image } from "expo-image";
+import { useState } from "react";
+import {
+	ActivityIndicator,
+	FlatList,
+	Pressable,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ExploreScreen() {
-	// Każda zmiana tokenu jest sygnałem "zrób refetch" dla każdej karty.
-	// Dzięki temu unikamy remountowania całej listy przez `key`.
-	const [refreshToken, setRefreshToken] = useState(0);
-	// `refreshing` steruje spinnerem w FlatList.
-	// Ten stan ma odpowiadać faktycznemu trwaniu odświeżania, a nie tylko kliknięciu/pull gesture.
-	const [isRefreshing, setIsRefreshing] = useState(false);
-	// Licznik kart, które jeszcze nie zakończyły swojej próby refetchu.
-	const [pendingCards, setPendingCards] = useState(0);
-	// Resolver Promise używany do "czekania" w refetchAll, aż wszystkie karty się rozliczą.
-	const refreshResolverRef = useRef<(() => void) | null>(null);
+	const [searchTerm, setSearchTerm] = useState(POPULAR[0]);
+	const {
+		data: countries,
+		isLoading: countriesLoading,
+		isError: countriesError,
+		refetch: refetchCountries,
+	} = useCountriesQuery();
+	const {
+		data,
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+		isLoading: photosLoading,
+		isError: photosError,
+		refetch: refetchPhotos,
+	} = useUnsplashInfiniteQuery(searchTerm);
 
-	useEffect(() => {
-		// Gdy ostatnia karta zgłosi zakończenie, zwalniamy await w refetchAll.
-		if (isRefreshing && pendingCards === 0 && refreshResolverRef.current) {
-			refreshResolverRef.current();
-			refreshResolverRef.current = null;
-		}
-	}, [isRefreshing, pendingCards]);
+	const photos = data?.pages.flatMap((page) => page.results) ?? [];
 
-	const handleCardRefreshSettled = useCallback(() => {
-		// Zabezpieczenie przed zejściem poniżej 0 (np. przy nietypowej kolejności callbacków).
-		setPendingCards((prev) => Math.max(prev - 1, 0));
-	}, []);
+	if (countriesLoading || photosLoading) {
+		return (
+			<SafeAreaView style={styles.container}>
+				<SkeletonCard />
+			</SafeAreaView>
+		);
+	}
 
-	// Trzymamy `refreshing=true` aż wszystkie karty zakończą własny refetch.
-	// Dzięki temu spinner znika dopiero po rzeczywistym odświeżeniu danych, a nie po samym triggerze.
-	const refetchAll = async () => {
-		// FlatList potrafi wywołać onRefresh ponownie zanim poprzedni cykl się skończy;
-		// guard zapobiega nakładaniu kilku refreshy naraz.
-		if (isRefreshing) return;
-
-		setIsRefreshing(true);
-		try {
-			// Startujemy nową rundę i oczekujemy tylu sygnałów, ile renderujemy kart.
-			setPendingCards(POPULAR.length);
-			setRefreshToken((prev) => prev + 1);
-			await new Promise<void>((resolve) => {
-				refreshResolverRef.current = resolve;
-			});
-		} catch (error) {
-			console.error("Nie udało się odświeżyć kart kierunków", error);
-		} finally {
-			setIsRefreshing(false);
-			setPendingCards(0);
-			refreshResolverRef.current = null;
-		}
-	};
+	if (countriesError) {
+		return (
+			<SafeAreaView style={styles.container}>
+				<ErrorView
+					message="Nie udało się załadować listy krajów"
+					onRetry={() => void refetchCountries()}
+				/>
+			</SafeAreaView>
+		);
+	}
 
 	return (
 		<SafeAreaView style={styles.container}>
@@ -66,21 +69,64 @@ export default function ExploreScreen() {
 				/>
 			</View>
 
-			<FlatList
-				data={POPULAR}
-				keyExtractor={(city) => city}
-				refreshing={isRefreshing}
-				onRefresh={refetchAll}
-				renderItem={({ item }) => (
-					<DestinationCard
-						city={item}
-						refreshToken={refreshToken}
-						onRefreshSettled={handleCardRefreshSettled}
-					/>
-				)}
-				contentContainerStyle={styles.listContent}
-				showsVerticalScrollIndicator={false}
-			/>
+			<View style={styles.chips}>
+				{POPULAR.map((city) => (
+					<Pressable
+						key={city}
+						style={[styles.chip, searchTerm === city && styles.chipActive]}
+						onPress={() => setSearchTerm(city)}
+					>
+						<Text
+							style={[
+								styles.chipText,
+								searchTerm === city && styles.chipTextActive,
+							]}
+						>
+							{city}
+						</Text>
+					</Pressable>
+				))}
+			</View>
+
+			{photosError ? (
+				<ErrorView
+					message="Nie udało się załadować zdjęć"
+					onRetry={() => void refetchPhotos()}
+				/>
+			) : (
+				<FlatList
+					data={photos}
+					keyExtractor={(item: UnsplashPhoto) => item.id}
+					numColumns={2}
+					columnWrapperStyle={styles.column}
+					contentContainerStyle={styles.listContent}
+					onEndReached={() => hasNextPage && fetchNextPage()}
+					onEndReachedThreshold={0.5}
+					ListHeaderComponent={
+						countries?.[0] ? (
+							<CountryCard countryName={countries[0].name.common} />
+						) : null
+					}
+					ListFooterComponent={
+						isFetchingNextPage ? (
+							<ActivityIndicator color={Colors.primary} />
+						) : null
+					}
+					renderItem={({ item }) => (
+						<View style={styles.gridItem}>
+							<Image
+								source={{ uri: item.urls.regular }}
+								style={styles.photo}
+								contentFit="cover"
+								cachePolicy="memory-disk"
+								transition={200}
+							/>
+							<Text style={styles.photoAuthor}>Photo by {item.user.name}</Text>
+						</View>
+					)}
+					showsVerticalScrollIndicator={false}
+				/>
+			)}
 		</SafeAreaView>
 	);
 }
@@ -93,8 +139,50 @@ const styles = StyleSheet.create({
 	headerContainer: {
 		paddingHorizontal: Spacing.lg,
 	},
+	chips: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: Spacing.sm,
+		paddingHorizontal: Spacing.lg,
+		paddingBottom: Spacing.md,
+	},
+	chip: {
+		paddingHorizontal: Spacing.md,
+		paddingVertical: Spacing.xs,
+		borderRadius: Spacing.lg,
+		backgroundColor: Colors.card,
+	},
+	chipActive: {
+		backgroundColor: Colors.primary,
+	},
+	chipText: {
+		color: Colors.textSecondary,
+		fontSize: 13,
+		fontWeight: "600",
+	},
+	chipTextActive: {
+		color: Colors.background,
+	},
 	listContent: {
 		padding: Spacing.lg,
 		gap: Spacing.lg,
+	},
+	column: {
+		gap: Spacing.lg,
+		marginBottom: Spacing.lg,
+	},
+	gridItem: {
+		flex: 1,
+		gap: Spacing.xs,
+	},
+	photo: {
+		width: "100%",
+		aspectRatio: 1,
+		borderRadius: Spacing.md,
+		backgroundColor: Colors.card,
+	},
+	photoAuthor: {
+		fontSize: 11,
+		color: Colors.textSecondary,
 	},
 });

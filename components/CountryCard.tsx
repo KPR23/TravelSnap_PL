@@ -1,8 +1,6 @@
-import { RESTCOUNTRIES_BASE_URL } from "@/constants/api";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
-import { useFetch } from "@/hooks/useFetch";
-import { Country } from "@/types/country";
+import { useCountryQuery } from "@/hooks/useCountriesQuery";
 import { Image } from "expo-image";
 import { JSX } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -14,14 +12,9 @@ interface CountryCardProps {
 export function CountryCard({
 	countryName,
 }: CountryCardProps): JSX.Element | null {
-	// Bazowy URL pobieramy z commitowanego `constants/api.ts` (bez sekretow w repo),
-	// a ewentualne klucze trafiaja przez EXPO_PUBLIC_* z lokalnego .env.
-	const URL = `${RESTCOUNTRIES_BASE_URL}/name/${encodeURIComponent(countryName)}`;
+	const { data, isLoading, error } = useCountryQuery(countryName);
 
-	const { data, loading, error, refetch: _refetch } = useFetch<Country[]>(URL);
-	void _refetch;
-
-	if (loading) {
+	if (isLoading) {
 		return <View style={styles.skeleton} />;
 	}
 

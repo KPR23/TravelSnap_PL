@@ -1,13 +1,13 @@
 import AddTripForm from "@/components/AddTripForm";
 import { Colors } from "@/constants/Colors";
-import { useTrips } from "@/context/TripsContext";
+import { useAddTrip } from "@/hooks/useTripMutations";
 import type { TripFormData } from "@/types/tripSchema";
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AddTripScreen() {
-	const { addTrip } = useTrips();
+	const { mutateAsync: addTrip } = useAddTrip();
 
 	const handleAddTrip = async (data: TripFormData) => {
 		await addTrip(data);
