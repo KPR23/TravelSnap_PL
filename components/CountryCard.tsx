@@ -1,8 +1,6 @@
-import { ErrorView } from "@/components/ErrorView";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { useCountryQuery } from "@/hooks/useCountriesQuery";
-import { Country } from "@/types/country";
 import { Image } from "expo-image";
 import { JSX } from "react";
 import { StyleSheet, Text, View } from "react-native";
