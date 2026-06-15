@@ -1,10 +1,12 @@
 import { AnimatedTripCard } from "@/components/animated/AnimatedTripCard";
 import { FAB } from "@/components/FAB";
 import ScreenHeader from "@/components/ScreenHeader";
+import { SkeletonCard } from "@/components/SkeletonCard";
 import TripStats from "@/components/TripStats";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
-import { useTrips } from "@/context/TripsContext";
+import { useDeleteTrip } from "@/hooks/useTripMutations";
+import { useTripsQuery } from "@/hooks/useTripsQuery";
 import { getTripStats } from "@/utils/tripStats";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,7 +17,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const PAGE_SIZE = 20;
 
 export default function HomeScreen() {
-	const { trips, deleteTrip } = useTrips();
+	const { data: trips = [], isLoading } = useTripsQuery();
+	const { mutateAsync: deleteTrip } = useDeleteTrip();
 	const sortedTrips = useMemo(
 		() => [...trips].sort((a, b) => b.rating - a.rating),
 		[trips],
@@ -60,6 +63,21 @@ export default function HomeScreen() {
 		[router],
 	);
 
+	const handleDeleteTrip = useCallback(
+		(id: string) => {
+			void deleteTrip(id);
+		},
+		[deleteTrip],
+	);
+
+	if (isLoading) {
+		return (
+			<SafeAreaView style={styles.container}>
+				<SkeletonCard />
+			</SafeAreaView>
+		);
+	}
+
 	return (
 		<SafeAreaView style={styles.container}>
 			<ScreenHeader
@@ -91,7 +109,7 @@ export default function HomeScreen() {
 						trip={item}
 						index={index}
 						onPress={handleTripPress}
-						onDelete={deleteTrip}
+						onDelete={handleDeleteTrip}
 					/>
 				)}
 			/>
