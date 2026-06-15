@@ -1,67 +1,63 @@
-import { DestinationCard } from "@/components/DestinationCard";
+import { CountryCard } from "@/components/CountryCard";
+import { ErrorView } from "@/components/ErrorView";
 import ScreenHeader from "@/components/ScreenHeader";
 import { SkeletonCard } from "@/components/SkeletonCard";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
+import { useCountriesQuery } from "@/hooks/useCountriesQuery";
+import { useUnsplashInfiniteQuery } from "@/hooks/useUnsplashInfiniteQuery";
 import { POPULAR } from "@/lib/destinations";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import type { UnsplashPhoto } from "@/types/unsplash";
+import { Image } from "expo-image";
+import { useState } from "react";
+import {
+	ActivityIndicator,
+	FlatList,
+	Pressable,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const SKELETON_DELAY_MS = 2000;
-
 export default function ExploreScreen() {
-	const [refreshToken, setRefreshToken] = useState(0);
+	const [searchTerm, setSearchTerm] = useState(POPULAR[0]);
+	const {
+		data: countries,
+		isLoading: countriesLoading,
+		isError: countriesError,
+		refetch: refetchCountries,
+	} = useCountriesQuery();
+	const {
+		data,
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+		isLoading: photosLoading,
+		isError: photosError,
+		refetch: refetchPhotos,
+	} = useUnsplashInfiniteQuery(searchTerm);
 
-	const [isInitialLoading, setIsInitialLoading] = useState(true);
-	const [isRefreshing, setIsRefreshing] = useState(false);
-	const [pendingCards, setPendingCards] = useState(0);
-	const refreshResolverRef = useRef<(() => void) | null>(null);
+	const photos = data?.pages.flatMap((page) => page.results) ?? [];
 
-	useEffect(() => {
-		const timer = setTimeout(() => setIsInitialLoading(false), SKELETON_DELAY_MS);
-		return () => clearTimeout(timer);
-	}, []);
+	if (countriesLoading || photosLoading) {
+		return (
+			<SafeAreaView style={styles.container}>
+				<SkeletonCard />
+			</SafeAreaView>
+		);
+	}
 
-	useEffect(() => {
-		if (isRefreshing && pendingCards === 0 && refreshResolverRef.current) {
-			refreshResolverRef.current();
-			refreshResolverRef.current = null;
-		}
-	}, [isRefreshing, pendingCards]);
-
-	const handleCardRefreshSettled = useCallback(() => {
-		setPendingCards((prev) => Math.max(prev - 1, 0));
-	}, []);
-
-	const refetchAll = async () => {
-		if (isRefreshing) return;
-
-		setIsRefreshing(true);
-		const startedAt = Date.now();
-
-		try {
-			setPendingCards(POPULAR.length);
-			setRefreshToken((prev) => prev + 1);
-			await new Promise<void>((resolve) => {
-				refreshResolverRef.current = resolve;
-			});
-
-			const remaining = SKELETON_DELAY_MS - (Date.now() - startedAt);
-			if (remaining > 0) {
-				await new Promise((resolve) => setTimeout(resolve, remaining));
-			}
-		} catch (error) {
-			console.error("Nie udało się odświeżyć kart kierunków", error);
-		} finally {
-			setIsRefreshing(false);
-			setPendingCards(0);
-			refreshResolverRef.current = null;
-		}
-	};
-
-	const showSkeleton = isInitialLoading || isRefreshing;
+	if (countriesError) {
+		return (
+			<SafeAreaView style={styles.container}>
+				<ErrorView
+					message="Nie udało się załadować listy krajów"
+					onRetry={() => void refetchCountries()}
+				/>
+			</SafeAreaView>
+		);
+	}
 
 	return (
 		<SafeAreaView style={styles.container}>
@@ -73,37 +69,61 @@ export default function ExploreScreen() {
 				/>
 			</View>
 
-			{showSkeleton ? (
-				<View style={styles.skeletonContainer}>
-					{Array.from({ length: 10 }).map((_, index) => (
-						<SkeletonCard key={index} />
-					))}
-				</View>
+			<View style={styles.chips}>
+				{POPULAR.map((city) => (
+					<Pressable
+						key={city}
+						style={[styles.chip, searchTerm === city && styles.chipActive]}
+						onPress={() => setSearchTerm(city)}
+					>
+						<Text
+							style={[
+								styles.chipText,
+								searchTerm === city && styles.chipTextActive,
+							]}
+						>
+							{city}
+						</Text>
+					</Pressable>
+				))}
+			</View>
+
+			{photosError ? (
+				<ErrorView
+					message="Nie udało się załadować zdjęć"
+					onRetry={() => void refetchPhotos()}
+				/>
 			) : (
-				<Animated.FlatList
-					data={POPULAR}
-					keyExtractor={(city) => city}
+				<FlatList
+					data={photos}
+					keyExtractor={(item: UnsplashPhoto) => item.id}
 					numColumns={2}
 					columnWrapperStyle={styles.column}
-					refreshing={isRefreshing}
-					onRefresh={refetchAll}
-					renderItem={({ item, index }) => {
-						const column = index % 2;
-
-						return (
-							<Animated.View
-								entering={FadeInDown.delay(index * 100 + column * 50).springify()}
-								style={styles.gridItem}
-							>
-								<DestinationCard
-									city={item}
-									refreshToken={refreshToken}
-									onRefreshSettled={handleCardRefreshSettled}
-								/>
-							</Animated.View>
-						);
-					}}
 					contentContainerStyle={styles.listContent}
+					onEndReached={() => hasNextPage && fetchNextPage()}
+					onEndReachedThreshold={0.5}
+					ListHeaderComponent={
+						countries?.[0] ? (
+							<CountryCard countryName={countries[0].name.common} />
+						) : null
+					}
+					ListFooterComponent={
+						isFetchingNextPage ? (
+							<ActivityIndicator color={Colors.primary} />
+						) : null
+					}
+					renderItem={({ item }) => (
+						<View style={styles.gridItem}>
+							<Image
+								source={{ uri: item.urls.regular }}
+								style={styles.photo}
+								contentFit="cover"
+								cachePolicy="memory-disk"
+								transition={200}
+							/>
+							<Text style={styles.photoAuthor}>Photo by {item.user.name}</Text>
+						</View>
+					)}
 					showsVerticalScrollIndicator={false}
 				/>
 			)}
@@ -119,8 +139,33 @@ const styles = StyleSheet.create({
 	headerContainer: {
 		paddingHorizontal: Spacing.lg,
 	},
+	chips: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: Spacing.sm,
+		paddingHorizontal: Spacing.lg,
+		paddingBottom: Spacing.md,
+	},
+	chip: {
+		paddingHorizontal: Spacing.md,
+		paddingVertical: Spacing.xs,
+		borderRadius: Spacing.lg,
+		backgroundColor: Colors.card,
+	},
+	chipActive: {
+		backgroundColor: Colors.primary,
+	},
+	chipText: {
+		color: Colors.textSecondary,
+		fontSize: 13,
+		fontWeight: "600",
+	},
+	chipTextActive: {
+		color: Colors.background,
+	},
 	listContent: {
 		padding: Spacing.lg,
+		gap: Spacing.lg,
 	},
 	column: {
 		gap: Spacing.lg,
@@ -128,9 +173,16 @@ const styles = StyleSheet.create({
 	},
 	gridItem: {
 		flex: 1,
+		gap: Spacing.xs,
 	},
-	skeletonContainer: {
-		padding: Spacing.lg,
-		gap: Spacing.lg,
+	photo: {
+		width: "100%",
+		aspectRatio: 1,
+		borderRadius: Spacing.md,
+		backgroundColor: Colors.card,
+	},
+	photoAuthor: {
+		fontSize: 11,
+		color: Colors.textSecondary,
 	},
 });
